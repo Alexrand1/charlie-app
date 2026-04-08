@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useRouter } from "expo-router";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { auth } from "@/services/auth";
+import { registerForPushNotifications } from "@/services/notifications";
 
 export default function IndexScreen() {
   const router = useRouter();
@@ -9,6 +10,8 @@ export default function IndexScreen() {
   useEffect(() => {
     auth.isAuthenticated().then((authenticated) => {
       if (authenticated) {
+        // Register for push notifications in the background
+        registerForPushNotifications().catch(() => {});
         router.replace("/tabs");
       } else {
         router.replace("/auth/sign-in");
