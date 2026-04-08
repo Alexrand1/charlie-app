@@ -21,16 +21,31 @@ import {
   PlaidAccount,
   PlaidTransaction,
 } from "@/services/plaid";
+import {
+  getInsights,
+  generateInsights,
+  dismissInsight,
+  Insight,
+} from "@/services/insights";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:3000";
+
+const INSIGHT_ICONS: Record<string, string> = {
+  MOVE_MONEY: "💸",
+  STOP_LEAK: "🚨",
+  PATTERN: "📊",
+  NONE: "💡",
+};
 
 export default function HomeScreen() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accounts, setAccounts] = useState<PlaidAccount[]>([]);
   const [transactions, setTransactions] = useState<PlaidTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [insights, setInsights] = useState<Insight[]>([]);
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [generatingInsights, setGeneratingInsights] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -49,10 +64,14 @@ export default function HomeScreen() {
         const accts = await getAccounts();
         setAccounts(accts);
 
-        // If we have accounts, also fetch recent transactions
+        // If we have accounts, also fetch recent transactions and insights
         if (accts.length > 0) {
-          const txns = await getTransactions({ limit: 20 });
+          const [txns, insightData] = await Promise.all([
+            getTransactions({ limit: 20 }).catch(() => []),
+            getInsights().catch(() => []),
+          ]);
           setTransactions(txns);
+          setInsights(insightData);
         }
       } catch {
         // No accounts yet, that's fine
@@ -125,6 +144,30 @@ export default function HomeScreen() {
     }
   };
 
+  const handleGenerateInsights = async () => {
+    setGeneratingInsights(true);
+    try {
+      const result = await generateInsights();
+      setInsights(result.insights);
+      if (result.generated === 0) {
+        Alert.alert("No New Insights", "Charlie didn't find anything new to flag right now.");
+      }
+    } catch (err: any) {
+      Alert.alert("Error", err.response?.data?.message || err.message);
+    } finally {
+      setGeneratingInsights(false);
+    }
+  };
+
+  const handleDismissInsight = async (insight: Insight) => {
+    try {
+      await dismissInsight(insight.insightId, insight.createdAt);
+      setInsights((prev) => prev.filter((i) => i.insightId !== insight.insightId));
+    } catch {
+      // silently fail
+    }
+  };
+
   const handleSync = async () => {
     setSyncing(true);
     try {
@@ -161,6 +204,67 @@ export default function HomeScreen() {
       <Text style={styles.subtitle}>
         {hasAccounts ? "Here's your financial snapshot" : "Welcome to Charlie"}
       </Text>
+
+      {/* Insights */}
+      {hasAccounts && insights.length > 0 && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Insights</Text>
+            <TouchableOpacity
+              onPress={handleGenerateInsights}
+              disabled={generatingInsights}
+            >
+              <Text style={styles.addButton}>
+                {generatingInsights ? "Analyzing..." : "↻ Refresh"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {insights.map((insight) => (
+            <View key={insight.insightId} style={styles.insightCard}>
+              <View style={styles.insightHeader}>
+                <Text style={styles.insightIcon}>
+                  {INSIGHT_ICONS[insight.actionType] || "💡"}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => handleDismissInsight(insight)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.dismissBtn}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.insightText}>{insight.insight}</Text>
+              {insight.actionLabel && (
+                <View style={styles.insightAction}>
+                  <Text style={styles.insightActionText}>
+                    {insight.actionLabel}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ))}
+        </>
+      )}
+
+      {/* Generate Insights CTA (when accounts exist but no insights) */}
+      {hasAccounts && insights.length === 0 && (
+        <TouchableOpacity
+          style={styles.generateCard}
+          onPress={handleGenerateInsights}
+          disabled={generatingInsights}
+          activeOpacity={0.8}
+        >
+          {generatingInsights ? (
+            <ActivityIndicator color="#1B2A4A" />
+          ) : (
+            <>
+              <Text style={styles.generateIcon}>✨</Text>
+              <Text style={styles.generateText}>
+                Get personalized insights from Charlie
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
 
       {/* Connect Bank Card (shown when no accounts) */}
       {!hasAccounts && (
@@ -357,6 +461,49 @@ const styles = StyleSheet.create({
   txnAmount: { fontSize: 16, fontWeight: "600" },
   txnDebit: { color: "#1B2A4A" },
   txnCredit: { color: "#10B981" },
+
+  // Insight cards
+  insightCard: {
+    backgroundColor: "#FFFBEB",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: "#F59E0B",
+  },
+  insightHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  insightIcon: { fontSize: 20 },
+  dismissBtn: { fontSize: 16, color: "#94A3B8", padding: 4 },
+  insightText: { fontSize: 14, color: "#1E293B", lineHeight: 20, marginBottom: 8 },
+  insightAction: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignSelf: "flex-start",
+  },
+  insightActionText: { fontSize: 13, fontWeight: "600", color: "#92400E" },
+
+  // Generate insights CTA
+  generateCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderStyle: "dashed",
+  },
+  generateIcon: { fontSize: 18, marginRight: 8 },
+  generateText: { fontSize: 14, color: "#64748B", fontWeight: "500" },
 
   // Empty state
   emptyCard: {
