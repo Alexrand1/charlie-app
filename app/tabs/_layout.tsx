@@ -6,14 +6,21 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: "#1B2A4A",
+        tabBarInactiveTintColor: "#999",
+        tabBarStyle: {
+          backgroundColor: "#fff",
+          borderTopColor: "#E2E8F0",
+        },
         headerStyle: { backgroundColor: "#1B2A4A" },
         headerTintColor: "#fff",
+        headerTitleStyle: { fontWeight: "600" },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: "Home",
+          headerTitle: "Charlie",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
