@@ -14,12 +14,27 @@
       "supportsTablet": false,
       "bundleIdentifier": "co.getcharlie.app"
     },
+    "android": {
+      "package": "co.getcharlie.app"
+    },
     "plugins": [
       "expo-router",
       "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    },
+    "owner": "alexrand1",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": ""
     }
   }
 }
