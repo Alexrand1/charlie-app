@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Charlie",
+    "slug": "charlie-app",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "charlie",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1B2A4A"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "co.getcharlie.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Use Face ID to securely sign in to Charlie"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#1B2A4A"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
