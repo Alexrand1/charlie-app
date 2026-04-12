@@ -18,11 +18,12 @@ import {
   deleteGoal,
   Goal,
 } from "@/services/goals";
+import { colors, spacing, radii } from "@/constants/theme";
 
 const GOAL_TYPES = [
-  { key: "save", label: "Save", icon: "💰", color: "#10B981" },
-  { key: "spend_limit", label: "Spend Limit", icon: "🎯", color: "#F59E0B" },
-  { key: "pay_off", label: "Pay Off", icon: "💳", color: "#EF4444" },
+  { key: "save", label: "Save", icon: "💰", color: colors.sage },
+  { key: "spend_limit", label: "Limit", icon: "🎯", color: colors.yellow },
+  { key: "pay_off", label: "Pay Off", icon: "💳", color: colors.negative },
 ];
 
 export default function GoalsScreen() {
@@ -32,7 +33,6 @@ export default function GoalsScreen() {
   const [showModal, setShowModal] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
 
-  // Form state
   const [formType, setFormType] = useState("save");
   const [formLabel, setFormLabel] = useState("");
   const [formTarget, setFormTarget] = useState("");
@@ -86,7 +86,6 @@ export default function GoalsScreen() {
       Alert.alert("Missing Fields", "Please enter a label and target amount.");
       return;
     }
-
     setSaving(true);
     try {
       if (editingGoal) {
@@ -107,10 +106,7 @@ export default function GoalsScreen() {
       setShowModal(false);
       fetchGoals();
     } catch (err: any) {
-      Alert.alert(
-        "Error",
-        err.response?.data?.error || err.message || "Could not save goal"
-      );
+      Alert.alert("Error", err.response?.data?.error || err.message);
     } finally {
       setSaving(false);
     }
@@ -144,25 +140,29 @@ export default function GoalsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1B2A4A" />
+      <View style={s.centered}>
+        <ActivityIndicator size="large" color={colors.yellow} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={s.container}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={s.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.yellow}
+          />
         }
       >
         {goals.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🎯</Text>
-            <Text style={styles.emptyTitle}>No goals yet</Text>
-            <Text style={styles.emptySubtitle}>
+          <View style={s.emptyState}>
+            <Text style={s.emptyIcon}>🎯</Text>
+            <Text style={s.emptyTitle}>No goals yet</Text>
+            <Text style={s.emptySubtitle}>
               Set savings targets, spending limits, or payoff goals to stay on
               track.
             </Text>
@@ -174,22 +174,22 @@ export default function GoalsScreen() {
             return (
               <TouchableOpacity
                 key={goal.goalId}
-                style={styles.goalCard}
+                style={s.goalCard}
                 onPress={() => openEditModal(goal)}
                 onLongPress={() => handleDelete(goal)}
                 activeOpacity={0.7}
               >
-                <View style={styles.goalHeader}>
-                  <Text style={styles.goalIcon}>{info.icon}</Text>
-                  <View style={styles.goalInfo}>
-                    <Text style={styles.goalLabel}>{goal.label}</Text>
-                    <Text style={styles.goalType}>{info.label}</Text>
+                <View style={s.goalHeader}>
+                  <Text style={s.goalIcon}>{info.icon}</Text>
+                  <View style={s.goalInfo}>
+                    <Text style={s.goalLabel}>{goal.label}</Text>
+                    <Text style={s.goalType}>{info.label}</Text>
                   </View>
-                  <Text style={styles.goalAmount}>
+                  <Text style={s.goalAmount}>
                     ${goal.currentAmount.toLocaleString("en-US", {
                       minimumFractionDigits: 0,
                     })}
-                    <Text style={styles.goalTarget}>
+                    <Text style={s.goalTarget}>
                       {" / $"}
                       {goal.targetAmount.toLocaleString("en-US", {
                         minimumFractionDigits: 0,
@@ -198,11 +198,10 @@ export default function GoalsScreen() {
                   </Text>
                 </View>
 
-                {/* Progress bar */}
-                <View style={styles.progressBg}>
+                <View style={s.progressBg}>
                   <View
                     style={[
-                      styles.progressFill,
+                      s.progressFill,
                       {
                         width: `${Math.round(progress * 100)}%`,
                         backgroundColor: info.color,
@@ -211,14 +210,12 @@ export default function GoalsScreen() {
                   />
                 </View>
 
-                <View style={styles.goalFooter}>
-                  <Text style={styles.goalPercent}>
+                <View style={s.goalFooter}>
+                  <Text style={s.goalPercent}>
                     {Math.round(progress * 100)}%
                   </Text>
                   {goal.deadline && (
-                    <Text style={styles.goalDeadline}>
-                      Due {goal.deadline}
-                    </Text>
+                    <Text style={s.goalDeadline}>Due {goal.deadline}</Text>
                   )}
                 </View>
               </TouchableOpacity>
@@ -227,38 +224,34 @@ export default function GoalsScreen() {
         )}
       </ScrollView>
 
-      {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={openCreateModal}>
-        <Text style={styles.fabIcon}>+</Text>
+      <TouchableOpacity style={s.fab} onPress={openCreateModal}>
+        <Text style={s.fabIcon}>+</Text>
       </TouchableOpacity>
 
-      {/* Create/Edit Modal */}
       <Modal visible={showModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <Text style={s.modalTitle}>
               {editingGoal ? "Edit Goal" : "New Goal"}
             </Text>
 
-            {/* Type selector (only on create) */}
             {!editingGoal && (
-              <View style={styles.typeRow}>
+              <View style={s.typeRow}>
                 {GOAL_TYPES.map((t) => (
                   <TouchableOpacity
                     key={t.key}
                     style={[
-                      styles.typeChip,
+                      s.typeChip,
                       formType === t.key && {
-                        backgroundColor: t.color + "20",
                         borderColor: t.color,
                       },
                     ]}
                     onPress={() => setFormType(t.key)}
                   >
-                    <Text style={styles.typeChipIcon}>{t.icon}</Text>
+                    <Text style={s.typeChipIcon}>{t.icon}</Text>
                     <Text
                       style={[
-                        styles.typeChipLabel,
+                        s.typeChipLabel,
                         formType === t.key && { color: t.color },
                       ]}
                     >
@@ -270,57 +263,54 @@ export default function GoalsScreen() {
             )}
 
             <TextInput
-              style={styles.modalInput}
+              style={s.modalInput}
               placeholder="Goal name (e.g., Emergency Fund)"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colors.textMuted}
               value={formLabel}
               onChangeText={setFormLabel}
             />
-
             <TextInput
-              style={styles.modalInput}
+              style={s.modalInput}
               placeholder="Target amount"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
               value={formTarget}
               onChangeText={setFormTarget}
             />
-
             {editingGoal && (
               <TextInput
-                style={styles.modalInput}
+                style={s.modalInput}
                 placeholder="Current amount"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={colors.textMuted}
                 keyboardType="numeric"
                 value={formCurrent}
                 onChangeText={setFormCurrent}
               />
             )}
-
             <TextInput
-              style={styles.modalInput}
+              style={s.modalInput}
               placeholder="Deadline (YYYY-MM-DD, optional)"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colors.textMuted}
               value={formDeadline}
               onChangeText={setFormDeadline}
             />
 
-            <View style={styles.modalButtons}>
+            <View style={s.modalButtons}>
               <TouchableOpacity
-                style={styles.cancelBtn}
+                style={s.cancelBtn}
                 onPress={() => setShowModal(false)}
               >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={s.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+                style={[s.saveBtn, saving && s.saveBtnDisabled]}
                 onPress={handleSave}
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={colors.textOnYellow} size="small" />
                 ) : (
-                  <Text style={styles.saveBtnText}>
+                  <Text style={s.saveBtnText}>
                     {editingGoal ? "Update" : "Create"}
                   </Text>
                 )}
@@ -333,64 +323,62 @@ export default function GoalsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5F7FA" },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.surface0 },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F5F7FA",
+    backgroundColor: colors.surface0,
   },
-  content: { padding: 20, paddingBottom: 80 },
+  content: { padding: spacing.xl, paddingBottom: 80 },
 
   // Empty state
   emptyState: { alignItems: "center", marginTop: 80 },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { fontSize: 22, fontWeight: "bold", color: "#1B2A4A", marginBottom: 8 },
+  emptyIcon: { fontSize: 48, marginBottom: spacing.lg },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: colors.cream,
+    marginBottom: spacing.sm,
+  },
   emptySubtitle: {
     fontSize: 15,
-    color: "#64748B",
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 22,
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.xl,
   },
 
   // Goal cards
   goalCard: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    backgroundColor: colors.surface1,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
   },
   goalHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   goalIcon: { fontSize: 28, marginRight: 12 },
   goalInfo: { flex: 1 },
-  goalLabel: { fontSize: 16, fontWeight: "600", color: "#1B2A4A" },
-  goalType: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
-  goalAmount: { fontSize: 16, fontWeight: "bold", color: "#1B2A4A" },
-  goalTarget: { fontSize: 14, fontWeight: "normal", color: "#94A3B8" },
+  goalLabel: { fontSize: 16, fontWeight: "600", color: colors.cream },
+  goalType: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  goalAmount: { fontSize: 16, fontWeight: "bold", color: colors.cream },
+  goalTarget: { fontSize: 14, fontWeight: "normal", color: colors.textSecondary },
 
-  // Progress bar
   progressBg: {
     height: 8,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colors.surface2,
     borderRadius: 4,
     overflow: "hidden",
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   progressFill: { height: "100%", borderRadius: 4 },
 
-  goalFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  goalPercent: { fontSize: 13, fontWeight: "600", color: "#64748B" },
-  goalDeadline: { fontSize: 13, color: "#94A3B8" },
+  goalFooter: { flexDirection: "row", justifyContent: "space-between" },
+  goalPercent: { fontSize: 13, fontWeight: "600", color: colors.textSecondary },
+  goalDeadline: { fontSize: 13, color: colors.textSecondary },
 
   // FAB
   fab: {
@@ -400,84 +388,79 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#1B2A4A",
+    backgroundColor: colors.yellow,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 4,
   },
-  fabIcon: { fontSize: 28, color: "#fff", fontWeight: "300" },
+  fabIcon: { fontSize: 28, color: colors.textOnYellow, fontWeight: "300" },
 
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface1,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    padding: 24,
+    padding: spacing.xxl,
     paddingBottom: 40,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#1B2A4A",
-    marginBottom: 20,
+    color: colors.cream,
+    marginBottom: spacing.xl,
   },
 
-  // Type selector
-  typeRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 16,
-  },
+  typeRow: { flexDirection: "row", gap: 8, marginBottom: spacing.lg },
   typeChip: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     padding: 10,
-    borderRadius: 10,
+    borderRadius: radii.sm,
     borderWidth: 1.5,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#F8FAFC",
+    borderColor: colors.borderMid,
+    backgroundColor: colors.surface2,
   },
   typeChipIcon: { fontSize: 16, marginRight: 4 },
-  typeChipLabel: { fontSize: 13, fontWeight: "600", color: "#64748B" },
+  typeChipLabel: { fontSize: 13, fontWeight: "600", color: colors.textSecondary },
 
-  // Form inputs
   modalInput: {
-    backgroundColor: "#F5F7FA",
-    borderRadius: 12,
+    backgroundColor: colors.surface2,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderMid,
     padding: 14,
     fontSize: 15,
-    color: "#1E293B",
-    marginBottom: 12,
+    color: colors.cream,
+    marginBottom: spacing.md,
   },
 
-  // Buttons
-  modalButtons: { flexDirection: "row", gap: 12, marginTop: 8 },
+  modalButtons: { flexDirection: "row", gap: 12, marginTop: spacing.sm },
   cancelBtn: {
     flex: 1,
     padding: 14,
-    borderRadius: 12,
-    backgroundColor: "#F1F5F9",
+    borderRadius: radii.md,
+    backgroundColor: colors.surface2,
     alignItems: "center",
   },
-  cancelBtnText: { fontSize: 15, fontWeight: "600", color: "#64748B" },
+  cancelBtnText: { fontSize: 15, fontWeight: "600", color: colors.textSecondary },
   saveBtn: {
     flex: 1,
     padding: 14,
-    borderRadius: 12,
-    backgroundColor: "#1B2A4A",
+    borderRadius: radii.md,
+    backgroundColor: colors.yellow,
     alignItems: "center",
   },
-  saveBtnDisabled: { backgroundColor: "#CBD5E1" },
-  saveBtnText: { fontSize: 15, fontWeight: "600", color: "#fff" },
+  saveBtnDisabled: { opacity: 0.5 },
+  saveBtnText: { fontSize: 15, fontWeight: "600", color: colors.textOnYellow },
 });

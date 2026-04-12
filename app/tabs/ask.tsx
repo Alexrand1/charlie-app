@@ -10,7 +10,14 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { sendMessage, getChatHistory, ChatMessage } from "@/services/chat";
+import { sendMessage, ChatMessage } from "@/services/chat";
+import { colors, spacing, radii } from "@/constants/theme";
+
+const SUGGESTIONS = [
+  "Am I on track?",
+  "Where did I spend most?",
+  "Save $500/mo?",
+];
 
 export default function AskCharlieScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -19,23 +26,19 @@ export default function AskCharlieScreen() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const flatListRef = useRef<FlatList>(null);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     }
   }, [messages]);
 
-  const handleSend = async () => {
-    const text = input.trim();
-    if (!text || sending) return;
+  const handleSend = async (text?: string) => {
+    const message = (text || input).trim();
+    if (!message || sending) return;
 
-    // Optimistically add user message
     const userMsg: ChatMessage = {
       role: "user",
-      content: text,
+      content: message,
       timestamp: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMsg]);
@@ -43,26 +46,31 @@ export default function AskCharlieScreen() {
     setSending(true);
 
     try {
-      const result = await sendMessage(text, sessionId);
+      const result = await sendMessage(message, sessionId);
       setSessionId(result.sessionId);
-
       const assistantMsg: ChatMessage = {
         role: "assistant",
         content: result.reply,
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
-    } catch (err: any) {
+    } catch {
       const errorMsg: ChatMessage = {
         role: "assistant",
         content:
-          "Sorry, I'm having trouble connecting right now. Please check that the backend is running and try again.",
+          "Sorry, I'm having trouble right now. Check that the backend is running and try again.",
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setSending(false);
     }
+  };
+
+  // Chip tap → immediate send (no manual submit required)
+  const handleChipPress = (chipText: string) => {
+    setInput(chipText);
+    handleSend(chipText);
   };
 
   const handleNewChat = () => {
@@ -75,17 +83,12 @@ export default function AskCharlieScreen() {
     return (
       <View
         style={[
-          styles.messageBubble,
-          isUser ? styles.userBubble : styles.assistantBubble,
+          s.bubble,
+          isUser ? s.userBubble : s.aiBubble,
         ]}
       >
-        {!isUser && <Text style={styles.charlieLabel}>Charlie</Text>}
-        <Text
-          style={[
-            styles.messageText,
-            isUser ? styles.userText : styles.assistantText,
-          ]}
-        >
+        {!isUser && <Text style={s.aiLabel}>CHARLIE</Text>}
+        <Text style={[s.bubbleText, isUser ? s.userText : s.aiText]}>
           {item.content}
         </Text>
       </View>
@@ -94,34 +97,22 @@ export default function AskCharlieScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={s.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={88}
     >
-      {/* Messages */}
       {messages.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>💬</Text>
-          <Text style={styles.emptyTitle}>Ask Charlie anything</Text>
-          <Text style={styles.emptySubtitle}>
-            Ask about your spending, get budgeting advice, or explore your
-            financial data.
-          </Text>
-          <View style={styles.suggestions}>
-            {[
-              "How much did I spend on dining this month?",
-              "Am I spending more than usual?",
-              "What subscriptions am I paying for?",
-              "Help me save more money",
-            ].map((suggestion, i) => (
+        <View style={s.emptyState}>
+          <Text style={s.emptyTitle}>Ask Charlie</Text>
+          <View style={s.chipRow}>
+            {SUGGESTIONS.map((sug, i) => (
               <TouchableOpacity
                 key={i}
-                style={styles.suggestionChip}
-                onPress={() => {
-                  setInput(suggestion);
-                }}
+                style={s.chip}
+                onPress={() => handleChipPress(sug)}
+                activeOpacity={0.7}
               >
-                <Text style={styles.suggestionText}>{suggestion}</Text>
+                <Text style={s.chipText}>{sug}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -131,173 +122,165 @@ export default function AskCharlieScreen() {
           ref={flatListRef}
           data={messages}
           renderItem={renderMessage}
-          keyExtractor={(_, index) => index.toString()}
-          contentContainerStyle={styles.messageList}
+          keyExtractor={(_, i) => i.toString()}
+          contentContainerStyle={s.messageList}
           onContentSizeChange={() =>
             flatListRef.current?.scrollToEnd({ animated: true })
           }
         />
       )}
 
-      {/* Typing indicator */}
       {sending && (
-        <View style={styles.typingContainer}>
-          <ActivityIndicator size="small" color="#1B2A4A" />
-          <Text style={styles.typingText}>Charlie is thinking...</Text>
+        <View style={s.typingRow}>
+          <ActivityIndicator size="small" color={colors.yellow} />
+          <Text style={s.typingText}>Charlie is thinking...</Text>
         </View>
       )}
 
-      {/* Input bar */}
-      <View style={styles.inputBar}>
+      {/* ─── Input Bar ─────────────────────────────── */}
+      <View style={s.inputBar}>
         {messages.length > 0 && (
-          <TouchableOpacity onPress={handleNewChat} style={styles.newChatBtn}>
-            <Text style={styles.newChatIcon}>+</Text>
+          <TouchableOpacity onPress={handleNewChat} style={s.newBtn}>
+            <Text style={s.newBtnIcon}>+</Text>
           </TouchableOpacity>
         )}
         <TextInput
-          style={styles.input}
+          style={s.input}
           value={input}
           onChangeText={setInput}
-          placeholder="Ask Charlie..."
-          placeholderTextColor="#94A3B8"
+          placeholder="Ask anything..."
+          placeholderTextColor={colors.textMuted}
           multiline
           maxLength={500}
           returnKeyType="send"
-          onSubmitEditing={handleSend}
+          onSubmitEditing={() => handleSend()}
           blurOnSubmit={false}
         />
         <TouchableOpacity
-          style={[styles.sendBtn, (!input.trim() || sending) && styles.sendBtnDisabled]}
-          onPress={handleSend}
+          style={[s.sendBtn, (!input.trim() || sending) && s.sendBtnDisabled]}
+          onPress={() => handleSend()}
           disabled={!input.trim() || sending}
         >
-          <Text style={styles.sendIcon}>↑</Text>
+          <Text style={s.sendIcon}>↑</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5F7FA" },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.surface0 },
 
   // Empty state
   emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 32,
+    padding: spacing.xxxl,
   },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
   emptyTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#1B2A4A",
-    marginBottom: 8,
+    fontSize: 24,
+    fontStyle: "italic",
+    color: colors.cream,
+    marginBottom: spacing.xxl,
   },
-  emptySubtitle: {
-    fontSize: 15,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  suggestions: {
+  chipRow: {
     width: "100%",
   },
-  suggestionChip: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
+  chip: {
+    backgroundColor: colors.surface2,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colors.borderMid,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: spacing.sm,
   },
-  suggestionText: { fontSize: 14, color: "#1B2A4A" },
+  chipText: {
+    fontSize: 14,
+    color: colors.cream,
+  },
 
   // Messages
-  messageList: { padding: 16, paddingBottom: 8 },
-  messageBubble: {
+  messageList: { padding: spacing.lg, paddingBottom: spacing.sm },
+  bubble: {
     maxWidth: "82%",
     padding: 14,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     marginBottom: 10,
   },
   userBubble: {
-    backgroundColor: "#1B2A4A",
+    backgroundColor: colors.yellow,
     alignSelf: "flex-end",
     borderBottomRightRadius: 4,
   },
-  assistantBubble: {
-    backgroundColor: "#fff",
+  aiBubble: {
+    backgroundColor: colors.surface2,
     alignSelf: "flex-start",
     borderBottomLeftRadius: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
   },
-  charlieLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#94A3B8",
-    marginBottom: 4,
+  aiLabel: {
+    fontSize: 10,
+    fontWeight: "400",
+    color: colors.sage,
+    letterSpacing: 1,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    marginBottom: 4,
   },
-  messageText: { fontSize: 15, lineHeight: 22 },
-  userText: { color: "#fff" },
-  assistantText: { color: "#1E293B" },
+  bubbleText: { fontSize: 15, lineHeight: 22 },
+  userText: { color: colors.textOnYellow },
+  aiText: { color: colors.cream },
 
-  // Typing indicator
-  typingContainer: {
+  // Typing
+  typingRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
   },
-  typingText: { fontSize: 13, color: "#64748B", marginLeft: 8 },
+  typingText: { fontSize: 12, color: colors.textSecondary, marginLeft: 8 },
 
   // Input bar
   inputBar: {
     flexDirection: "row",
     alignItems: "flex-end",
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     paddingVertical: 10,
-    backgroundColor: "#fff",
+    backgroundColor: colors.navyMid,
     borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
+    borderTopColor: colors.borderSubtle,
   },
-  newChatBtn: {
+  newBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: colors.surface2,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
-  newChatIcon: { fontSize: 20, color: "#64748B", fontWeight: "bold" },
+  newBtnIcon: { fontSize: 20, color: colors.textSecondary, fontWeight: "bold" },
   input: {
     flex: 1,
-    backgroundColor: "#F5F7FA",
+    backgroundColor: colors.surface2,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.borderMid,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 15,
     maxHeight: 100,
-    color: "#1E293B",
+    color: colors.cream,
   },
   sendBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#1B2A4A",
+    backgroundColor: colors.yellow,
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 8,
+    marginLeft: spacing.sm,
   },
-  sendBtnDisabled: { backgroundColor: "#CBD5E1" },
-  sendIcon: { fontSize: 18, color: "#fff", fontWeight: "bold" },
+  sendBtnDisabled: { backgroundColor: colors.yellowDim, opacity: 0.5 },
+  sendIcon: { fontSize: 18, color: colors.textOnYellow, fontWeight: "bold" },
 });

@@ -1,19 +1,22 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { colors } from "@/constants/theme";
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#1B2A4A",
-        tabBarInactiveTintColor: "#999",
+        tabBarActiveTintColor: colors.yellow,
+        tabBarInactiveTintColor: colors.neutral,
         tabBarStyle: {
-          backgroundColor: "#fff",
-          borderTopColor: "#E2E8F0",
+          backgroundColor: colors.navyMid,
+          borderTopColor: colors.borderSubtle,
+          borderTopWidth: 1,
         },
-        headerStyle: { backgroundColor: "#1B2A4A" },
-        headerTintColor: "#fff",
+        headerStyle: { backgroundColor: colors.navy },
+        headerTintColor: colors.cream,
         headerTitleStyle: { fontWeight: "600" },
+        headerShadowVisible: false,
       }}
     >
       <Tabs.Screen
@@ -29,7 +32,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="ask"
         options={{
-          title: "Ask Charlie",
+          title: "Charlie",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubble-outline" size={size} color={color} />
           ),
@@ -47,9 +50,9 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
+          title: "Profile",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
+            <Ionicons name="person-outline" size={size} color={color} />
           ),
         }}
       />

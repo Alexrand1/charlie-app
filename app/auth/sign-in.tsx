@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { auth } from "@/services/auth";
+import { colors, spacing, radii } from "@/constants/theme";
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -52,27 +53,27 @@ export default function SignInScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={s.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.card}>
-        <Text style={styles.logo}>Charlie</Text>
-        <Text style={styles.subtitle}>Your AI financial assistant</Text>
+      <View style={s.card}>
+        <Text style={s.logo}>Charlie</Text>
+        <Text style={s.subtitle}>Your money, moving.</Text>
 
         {isSignUp && (
           <TextInput
-            style={styles.input}
+            style={s.input}
             placeholder="First name"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             value={firstName}
             onChangeText={setFirstName}
             autoCapitalize="words"
           />
         )}
         <TextInput
-          style={styles.input}
+          style={s.input}
           placeholder="Email"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textMuted}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
@@ -80,33 +81,33 @@ export default function SignInScreen() {
           autoCorrect={false}
         />
         <TextInput
-          style={styles.input}
+          style={s.input}
           placeholder="Password"
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textMuted}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
         />
 
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[s.button, loading && s.buttonDisabled]}
           onPress={handleSubmit}
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.textOnYellow} />
           ) : (
-            <Text style={styles.buttonText}>
+            <Text style={s.buttonText}>
               {isSignUp ? "Create Account" : "Sign In"}
             </Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.switchButton}
+          style={s.switchButton}
           onPress={() => setIsSignUp(!isSignUp)}
         >
-          <Text style={styles.switchText}>
+          <Text style={s.switchText}>
             {isSignUp
               ? "Already have an account? Sign in"
               : "Don't have an account? Sign up"}
@@ -117,13 +118,13 @@ export default function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F5F7FA",
-    padding: 24,
+    backgroundColor: colors.surface0,
+    padding: spacing.xxl,
   },
   card: {
     width: "100%",
@@ -132,50 +133,50 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 40,
-    fontWeight: "bold",
-    color: "#1B2A4A",
-    marginBottom: 8,
+    fontStyle: "italic",
+    color: colors.cream,
+    marginBottom: spacing.sm,
   },
   subtitle: {
     fontSize: 16,
-    color: "#666",
-    marginBottom: 32,
+    color: colors.textSecondary,
+    marginBottom: spacing.xxxl,
   },
   input: {
     width: "100%",
     height: 50,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    marginBottom: 12,
+    backgroundColor: colors.surface2,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    color: "#1B2A4A",
+    borderColor: colors.borderMid,
+    paddingHorizontal: spacing.lg,
+    fontSize: 16,
+    marginBottom: spacing.md,
+    color: colors.cream,
   },
   button: {
     width: "100%",
     height: 50,
-    backgroundColor: "#1B2A4A",
-    borderRadius: 12,
+    backgroundColor: colors.yellow,
+    borderRadius: radii.md,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    color: "#fff",
+    color: colors.textOnYellow,
     fontSize: 16,
     fontWeight: "600",
   },
   switchButton: {
-    marginTop: 20,
-    padding: 8,
+    marginTop: spacing.xl,
+    padding: spacing.sm,
   },
   switchText: {
-    color: "#1B2A4A",
+    color: colors.textSecondary,
     fontSize: 14,
   },
 });

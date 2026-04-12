@@ -22,21 +22,9 @@ import {
   PlaidAccount,
   PlaidTransaction,
 } from "@/services/plaid";
-import {
-  getInsights,
-  generateInsights,
-  dismissInsight,
-  Insight,
-} from "@/services/insights";
+import { colors, spacing, radii } from "@/constants/theme";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:3000";
-
-const INSIGHT_ICONS: Record<string, string> = {
-  MOVE_MONEY: "💸",
-  STOP_LEAK: "🚨",
-  PATTERN: "📊",
-  NONE: "💡",
-};
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -58,11 +46,9 @@ export default function HomeScreen() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accounts, setAccounts] = useState<PlaidAccount[]>([]);
   const [transactions, setTransactions] = useState<PlaidTransaction[]>([]);
-  const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [generatingInsights, setGeneratingInsights] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -74,18 +60,12 @@ export default function HomeScreen() {
         const cached = await auth.getUser();
         if (cached) setUser(cached);
       }
-
       try {
         const accts = await getAccounts();
         setAccounts(accts);
-
         if (accts.length > 0) {
-          const [txns, insightData] = await Promise.all([
-            getTransactions({ limit: 20 }).catch(() => []),
-            getInsights().catch(() => []),
-          ]);
+          const txns = await getTransactions({ limit: 20 }).catch(() => []);
           setTransactions(txns);
-          setInsights(insightData);
         }
       } catch {
         // No accounts yet
@@ -105,16 +85,12 @@ export default function HomeScreen() {
     fetchData();
   }, [fetchData]);
 
-  const handleConnectBank = async () => {
-    Alert.alert(
-      "Connect Bank",
-      "Choose how to connect your bank account:",
-      [
-        { text: "Sandbox (Quick Test)", onPress: handleSandboxConnect },
-        { text: "Plaid Link (Browser)", onPress: handlePlaidLink },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
+  const handleConnectBank = () => {
+    Alert.alert("Connect Bank", "Choose how to connect:", [
+      { text: "Sandbox (Quick Test)", onPress: handleSandboxConnect },
+      { text: "Plaid Link (Browser)", onPress: handlePlaidLink },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const handleSandboxConnect = async () => {
@@ -123,14 +99,11 @@ export default function HomeScreen() {
       const result = await sandboxConnect();
       Alert.alert(
         "Bank Connected!",
-        `${result.institution}: ${result.accounts} account(s) linked, ${result.transactions_synced} transactions synced.`
+        `${result.institution}: ${result.accounts} account(s), ${result.transactions_synced} transactions synced.`
       );
       fetchData();
     } catch (err: any) {
-      Alert.alert(
-        "Connection Failed",
-        err.response?.data?.message || err.message || "Unknown error"
-      );
+      Alert.alert("Connection Failed", err.response?.data?.message || err.message);
     } finally {
       setConnecting(false);
     }
@@ -140,39 +113,13 @@ export default function HomeScreen() {
     setConnecting(true);
     try {
       const linkToken = await getLinkToken();
-      const url = `${API_URL}/plaid/link-page?link_token=${linkToken}&scheme=charlie`;
-      await Linking.openURL(url);
-    } catch (err: any) {
-      Alert.alert(
-        "Error",
-        err.response?.data?.message || err.message || "Could not start Plaid Link"
+      await Linking.openURL(
+        `${API_URL}/plaid/link-page?link_token=${linkToken}&scheme=charlie`
       );
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  const handleGenerateInsights = async () => {
-    setGeneratingInsights(true);
-    try {
-      const result = await generateInsights();
-      setInsights(result.insights);
-      if (result.generated === 0) {
-        Alert.alert("No New Insights", "Charlie didn't find anything new to flag right now.");
-      }
     } catch (err: any) {
       Alert.alert("Error", err.response?.data?.message || err.message);
     } finally {
-      setGeneratingInsights(false);
-    }
-  };
-
-  const handleDismissInsight = async (insight: Insight) => {
-    try {
-      await dismissInsight(insight.insightId, insight.createdAt);
-      setInsights((prev) => prev.filter((i) => i.insightId !== insight.insightId));
-    } catch {
-      // silently fail
+      setConnecting(false);
     }
   };
 
@@ -180,10 +127,7 @@ export default function HomeScreen() {
     setSyncing(true);
     try {
       const result = await syncTransactions();
-      Alert.alert(
-        "Sync Complete",
-        `${result.synced} new transaction(s) from ${result.items} item(s).`
-      );
+      Alert.alert("Sync Complete", `${result.synced} new transaction(s).`);
       fetchData();
     } catch (err: any) {
       Alert.alert("Sync Failed", err.response?.data?.message || err.message);
@@ -194,8 +138,8 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1B2A4A" />
+      <View style={s.centered}>
+        <ActivityIndicator size="large" color={colors.yellow} />
       </View>
     );
   }
@@ -207,150 +151,121 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.content}
+      style={s.scroll}
+      contentContainerStyle={s.content}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.yellow}
+        />
       }
     >
-      {/* ─── Header ──────────────────────────────────── */}
-      <Text style={styles.greeting}>
-        {getGreeting()}, {user?.firstName || "there"}
+      {/* ─── Greeting ────────────────────────────── */}
+      <Text style={s.greeting}>
+        {getGreeting()},{"\n"}
+        <Text style={s.greetingName}>{user?.firstName || "there"}</Text>
       </Text>
-      <Text style={styles.date}>{formatDate()}</Text>
+      <Text style={s.date}>{formatDate()}</Text>
 
-      {/* ─── Net Worth ───────────────────────────────── */}
-      <View style={styles.netWorthCard}>
-        <Text style={styles.netWorthLabel}>Net Worth</Text>
+      {/* ─── Net Worth ───────────────────────────── */}
+      <View style={s.netWorthCard}>
+        <Text style={s.sectionLabel}>NET WORTH</Text>
         {netWorth !== null ? (
-          <Text style={styles.netWorthValue}>
+          <Text style={s.netWorthValue}>
             ${netWorth.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </Text>
         ) : (
-          <View>
-            <Text style={styles.netWorthPlaceholder}>$—</Text>
-            <Text style={styles.netWorthHint}>
-              Link accounts to see your number
-            </Text>
-          </View>
+          <>
+            <Text style={s.netWorthPlaceholder}>$—</Text>
+            <TouchableOpacity onPress={handleConnectBank}>
+              <Text style={s.netWorthLink}>+ Link accounts →</Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
 
-      {/* ─── Action Row ──────────────────────────────── */}
-      <View style={styles.actionRow}>
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={handleConnectBank}
-          disabled={connecting}
-        >
-          {connecting ? (
-            <ActivityIndicator size="small" color="#1B2A4A" />
-          ) : (
-            <>
-              <Text style={styles.actionIcon}>+</Text>
-              <Text style={styles.actionLabel}>Link Account</Text>
-            </>
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => {}}>
-          <Text style={styles.actionIcon}>↗</Text>
-          <Text style={styles.actionLabel}>Transfer</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => {}}>
-          <Text style={styles.actionIcon}>📊</Text>
-          <Text style={styles.actionLabel}>Budget</Text>
-        </TouchableOpacity>
+      {/* ─── Action Row ──────────────────────────── */}
+      <View style={s.actionRow}>
+        {[
+          { label: "Transfer", icon: "↗", onPress: () => {} },
+          { label: "Budget", icon: "📊", onPress: () => {} },
+          { label: "Goals", icon: "🎯", onPress: () => router.push("/tabs/goals") },
+        ].map((action, i) => (
+          <TouchableOpacity
+            key={i}
+            style={s.actionBtn}
+            onPress={action.onPress}
+            activeOpacity={0.7}
+          >
+            <Text style={s.actionLabel}>{action.label}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      {/* ─── Charlie CTA ─────────────────────────────── */}
-      <TouchableOpacity
-        style={styles.charlieCta}
-        onPress={() => router.push("/tabs/ask")}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.charlieCtaText}>
-          Ask Charlie anything about your money →
-        </Text>
-      </TouchableOpacity>
-
-      {/* ─── Insights ────────────────────────────────── */}
-      {hasAccounts && insights.length > 0 && (
+      {/* ─── Accounts (if linked) ────────────────── */}
+      {hasAccounts && (
         <>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Insights</Text>
-            <TouchableOpacity
-              onPress={handleGenerateInsights}
-              disabled={generatingInsights}
-            >
-              <Text style={styles.linkBtn}>
-                {generatingInsights ? "Analyzing..." : "↻ Refresh"}
-              </Text>
+          <View style={s.sectionRow}>
+            <Text style={s.sectionLabel}>ACCOUNTS</Text>
+            <TouchableOpacity onPress={handleConnectBank}>
+              <Text style={s.yellowLink}>+ Add</Text>
             </TouchableOpacity>
           </View>
-          {insights.map((insight) => (
-            <View key={insight.insightId} style={styles.insightCard}>
-              <View style={styles.insightHeader}>
-                <Text style={styles.insightIcon}>
-                  {INSIGHT_ICONS[insight.actionType] || "💡"}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => handleDismissInsight(insight)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={styles.dismissBtn}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.insightText}>{insight.insight}</Text>
-              {insight.actionLabel && (
-                <View style={styles.insightAction}>
-                  <Text style={styles.insightActionText}>
-                    {insight.actionLabel}
+          {accounts.map((acct) => (
+            <View key={acct.accountId} style={s.card}>
+              <View style={s.cardRow}>
+                <View>
+                  <Text style={s.cardTitle}>{acct.name}</Text>
+                  <Text style={s.cardMeta}>
+                    {acct.type} · {acct.subtype}
                   </Text>
                 </View>
-              )}
+                <Text style={s.amountText}>
+                  ${(acct.currentBalance ?? 0).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                  })}
+                </Text>
+              </View>
             </View>
           ))}
         </>
       )}
 
-      {/* ─── Spending Module ─────────────────────────── */}
-      {hasAccounts ? (
+      {/* ─── Transactions (if linked) ────────────── */}
+      {hasAccounts && (
         <>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <View style={s.sectionRow}>
+            <Text style={s.sectionLabel}>RECENT TRANSACTIONS</Text>
             <TouchableOpacity onPress={handleSync} disabled={syncing}>
-              <Text style={styles.linkBtn}>
+              <Text style={s.yellowLink}>
                 {syncing ? "Syncing..." : "↻ Sync"}
               </Text>
             </TouchableOpacity>
           </View>
           {transactions.length === 0 ? (
-            <View style={styles.moduleCard}>
-              <Text style={styles.moduleEmoji}>💳</Text>
-              <View style={styles.moduleContent}>
-                <Text style={styles.moduleTitle}>Spending</Text>
-                <Text style={styles.moduleHint}>
-                  Tap Sync to pull your latest transactions
-                </Text>
-              </View>
+            <View style={s.card}>
+              <Text style={s.cardMeta}>
+                Tap Sync to pull your latest transactions
+              </Text>
             </View>
           ) : (
             transactions.map((txn) => (
-              <View key={txn.transactionId} style={styles.txnCard}>
-                <View style={styles.txnRow}>
-                  <View style={styles.txnLeft}>
-                    <Text style={styles.txnMerchant}>
+              <View key={txn.transactionId} style={s.card}>
+                <View style={s.cardRow}>
+                  <View style={{ flex: 1, marginRight: 12 }}>
+                    <Text style={s.cardTitle}>
                       {txn.merchantName || "Unknown"}
                     </Text>
-                    <Text style={styles.txnMeta}>
+                    <Text style={s.cardMeta}>
                       {txn.date} · {txn.category}
                       {txn.pending ? " · Pending" : ""}
                     </Text>
                   </View>
                   <Text
                     style={[
-                      styles.txnAmount,
-                      txn.amount > 0 ? styles.txnDebit : styles.txnCredit,
+                      s.amountText,
+                      { color: txn.amount > 0 ? colors.negative : colors.positive },
                     ]}
                   >
                     {txn.amount > 0 ? "-" : "+"}$
@@ -360,120 +275,54 @@ export default function HomeScreen() {
               </View>
             ))
           )}
+        </>
+      )}
 
-          {/* Accounts */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Accounts</Text>
-            <TouchableOpacity onPress={handleConnectBank} disabled={connecting}>
-              <Text style={styles.linkBtn}>+ Add</Text>
-            </TouchableOpacity>
-          </View>
-          {accounts.map((acct) => (
-            <View key={acct.accountId} style={styles.accountCard}>
-              <View style={styles.accountRow}>
-                <View>
-                  <Text style={styles.accountName}>{acct.name}</Text>
-                  <Text style={styles.accountType}>
-                    {acct.type} · {acct.subtype}
-                  </Text>
-                </View>
-                <Text style={styles.balance}>
-                  ${(acct.currentBalance ?? 0).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                  })}
-                </Text>
+      {/* ─── Module Cards (empty state) ──────────── */}
+      {!hasAccounts && (
+        <>
+          {[
+            { emoji: "💳", title: "Spending", hint: "See where your money goes" },
+            { emoji: "💰", title: "Savings", hint: "Track what you're building" },
+            { emoji: "📈", title: "Investments", hint: "Watch your money grow" },
+          ].map((mod, i) => (
+            <TouchableOpacity
+              key={i}
+              style={s.moduleCard}
+              onPress={handleConnectBank}
+              activeOpacity={0.7}
+            >
+              <Text style={s.moduleEmoji}>{mod.emoji}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.cardTitle}>{mod.title}</Text>
+                <Text style={s.cardMeta}>{mod.hint}</Text>
               </View>
-            </View>
+              <View style={s.ghostBtn}>
+                <Text style={s.ghostBtnText}>Link</Text>
+              </View>
+            </TouchableOpacity>
           ))}
         </>
-      ) : (
-        <>
-          {/* ─── Empty Modules ───────────────────────── */}
-          <TouchableOpacity
-            style={styles.moduleCard}
-            onPress={handleConnectBank}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.moduleEmoji}>💳</Text>
-            <View style={styles.moduleContent}>
-              <View style={styles.moduleRow}>
-                <Text style={styles.moduleTitle}>Spending</Text>
-                <Text style={styles.moduleLinkText}>Link</Text>
-              </View>
-              <Text style={styles.moduleHint}>
-                See where your money goes
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.moduleCard}
-            onPress={() => router.push("/tabs/goals")}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.moduleEmoji}>💰</Text>
-            <View style={styles.moduleContent}>
-              <View style={styles.moduleRow}>
-                <Text style={styles.moduleTitle}>Savings Goals</Text>
-                <Text style={styles.moduleLinkText}>Link</Text>
-              </View>
-              <Text style={styles.moduleHint}>
-                Track what you're building
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.moduleCard}
-            onPress={handleConnectBank}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.moduleEmoji}>📈</Text>
-            <View style={styles.moduleContent}>
-              <View style={styles.moduleRow}>
-                <Text style={styles.moduleTitle}>Investments</Text>
-                <Text style={styles.moduleLinkText}>Link</Text>
-              </View>
-              <Text style={styles.moduleHint}>
-                Watch your money grow
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </>
       )}
 
-      {/* ─── Generate Insights CTA ───────────────────── */}
-      {hasAccounts && insights.length === 0 && (
-        <TouchableOpacity
-          style={styles.generateCard}
-          onPress={handleGenerateInsights}
-          disabled={generatingInsights}
-          activeOpacity={0.8}
-        >
-          {generatingInsights ? (
-            <ActivityIndicator color="#1B2A4A" />
-          ) : (
-            <>
-              <Text style={styles.generateIcon}>✨</Text>
-              <Text style={styles.generateText}>
-                Get personalized insights from Charlie
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
-      )}
+      {/* ─── Ask Charlie CTA ─────────────────────── */}
+      <TouchableOpacity
+        style={s.charlieCta}
+        onPress={() => router.push("/tabs/ask")}
+        activeOpacity={0.7}
+      >
+        <Text style={s.charlieCtaText}>Ask Charlie anything →</Text>
+      </TouchableOpacity>
 
-      {/* ─── Bottom Status ───────────────────────────── */}
-      <View style={styles.bottomStatus}>
-        <Text style={styles.bottomText}>
-          Charlie connected {accounts.length} account
-          {accounts.length !== 1 ? "s" : ""}
+      {/* ─── Bottom Status ───────────────────────── */}
+      <View style={s.bottomStatus}>
+        <Text style={s.bottomText}>
+          Charlie has {accounts.length} account
+          {accounts.length !== 1 ? "s" : ""} connected
         </Text>
         {!hasAccounts && (
           <TouchableOpacity onPress={handleConnectBank}>
-            <Text style={styles.bottomLink}>
-              Connect your first account →
-            </Text>
+            <Text style={s.bottomLink}>Connect your first account →</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -481,245 +330,193 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F5F7FA",
+    backgroundColor: colors.surface0,
   },
-  scroll: { flex: 1, backgroundColor: "#F5F7FA" },
-  content: { padding: 20, paddingBottom: 40 },
+  scroll: { flex: 1, backgroundColor: colors.surface0 },
+  content: { padding: spacing.xl, paddingBottom: 40 },
 
-  // Header
+  // Greeting
   greeting: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#1B2A4A",
+    fontSize: 16,
+    color: colors.textSecondary,
     marginBottom: 2,
   },
+  greetingName: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: colors.cream,
+  },
   date: {
-    fontSize: 14,
-    color: "#94A3B8",
-    marginBottom: 20,
+    fontSize: 11,
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
+    marginBottom: spacing.xl,
   },
 
   // Net Worth
   netWorthCard: {
-    backgroundColor: "#1B2A4A",
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 16,
-  },
-  netWorthLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#94A3B8",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 6,
+    backgroundColor: colors.surface1,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    padding: spacing.xxl,
+    marginBottom: spacing.lg,
   },
   netWorthValue: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#fff",
+    fontSize: 32,
+    fontWeight: "400",
+    color: colors.cream,
+    marginTop: spacing.sm,
   },
   netWorthPlaceholder: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#475569",
+    fontSize: 32,
+    fontWeight: "400",
+    color: colors.textMuted,
+    marginTop: spacing.sm,
   },
-  netWorthHint: {
-    fontSize: 13,
-    color: "#64748B",
-    marginTop: 4,
+  netWorthLink: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.yellow,
+    marginTop: spacing.sm,
+  },
+
+  // Section labels (DM Mono style — uppercase, sage)
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: "400",
+    color: colors.sage,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  sectionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.md,
+    marginTop: spacing.xl,
   },
 
   // Action Row
   actionRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
     gap: 10,
+    marginBottom: spacing.xl,
   },
   actionBtn: {
     flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: colors.yellow,
+    borderRadius: radii.md,
+    paddingVertical: 12,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
   },
-  actionIcon: { fontSize: 20, marginBottom: 4 },
-  actionLabel: { fontSize: 12, fontWeight: "600", color: "#1B2A4A" },
-
-  // Charlie CTA
-  charlieCta: {
-    backgroundColor: "#EEF2FF",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#C7D2FE",
-  },
-  charlieCtaText: {
-    fontSize: 15,
+  actionLabel: {
+    fontSize: 14,
     fontWeight: "600",
-    color: "#4338CA",
-    textAlign: "center",
+    color: colors.textOnYellow,
   },
 
-  // Section headers
-  sectionHeader: {
+  // Generic card
+  card: {
+    backgroundColor: colors.surface1,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    padding: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  cardRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
-    marginTop: 8,
   },
-  sectionTitle: { fontSize: 18, fontWeight: "600", color: "#1B2A4A" },
-  linkBtn: { fontSize: 14, fontWeight: "600", color: "#3B82F6" },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.cream,
+  },
+  cardMeta: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  amountText: {
+    fontSize: 16,
+    fontWeight: "400",
+    color: colors.cream,
+  },
+
+  // Yellow link
+  yellowLink: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.yellow,
+  },
 
   // Module cards (empty state)
   moduleCard: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 18,
-    marginBottom: 10,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  moduleEmoji: { fontSize: 28, marginRight: 14 },
-  moduleContent: { flex: 1 },
-  moduleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  moduleTitle: { fontSize: 16, fontWeight: "600", color: "#1B2A4A" },
-  moduleLinkText: { fontSize: 13, fontWeight: "600", color: "#3B82F6" },
-  moduleHint: { fontSize: 13, color: "#94A3B8", marginTop: 2 },
-
-  // Account cards
-  accountCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  accountRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  accountName: { fontSize: 16, fontWeight: "600", color: "#1B2A4A" },
-  accountType: { fontSize: 13, color: "#94A3B8", marginTop: 2 },
-  balance: { fontSize: 18, fontWeight: "bold", color: "#1B2A4A" },
-
-  // Transaction cards
-  txnCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  txnRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  txnLeft: { flex: 1, marginRight: 12 },
-  txnMerchant: { fontSize: 15, fontWeight: "500", color: "#1B2A4A" },
-  txnMeta: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
-  txnAmount: { fontSize: 16, fontWeight: "600" },
-  txnDebit: { color: "#1B2A4A" },
-  txnCredit: { color: "#10B981" },
-
-  // Insight cards
-  insightCard: {
-    backgroundColor: "#FFFBEB",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: "#F59E0B",
-  },
-  insightHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  insightIcon: { fontSize: 20 },
-  dismissBtn: { fontSize: 16, color: "#94A3B8", padding: 4 },
-  insightText: {
-    fontSize: 14,
-    color: "#1E293B",
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  insightAction: {
-    backgroundColor: "#FEF3C7",
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    alignSelf: "flex-start",
-  },
-  insightActionText: { fontSize: 13, fontWeight: "600", color: "#92400E" },
-
-  // Generate insights CTA
-  generateCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: colors.surface1,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderStyle: "dashed",
+    borderColor: colors.borderSubtle,
+    padding: spacing.lg,
+    marginBottom: spacing.sm,
   },
-  generateIcon: { fontSize: 18, marginRight: 8 },
-  generateText: { fontSize: 14, color: "#64748B", fontWeight: "500" },
+  moduleEmoji: {
+    fontSize: 24,
+    marginRight: spacing.md,
+  },
+  ghostBtn: {
+    borderWidth: 1,
+    borderColor: colors.yellow,
+    borderRadius: radii.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  ghostBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.yellow,
+  },
+
+  // Charlie CTA
+  charlieCta: {
+    backgroundColor: colors.yellow,
+    borderRadius: radii.md,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: spacing.xl,
+    marginBottom: spacing.lg,
+  },
+  charlieCtaText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.textOnYellow,
+  },
 
   // Bottom status
   bottomStatus: {
     alignItems: "center",
-    paddingTop: 20,
-    paddingBottom: 8,
+    paddingTop: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
-    marginTop: 12,
+    borderTopColor: colors.borderSubtle,
   },
   bottomText: {
-    fontSize: 13,
-    color: "#94A3B8",
-    marginBottom: 4,
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 0.5,
   },
   bottomLink: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#3B82F6",
-    marginTop: 4,
+    color: colors.yellow,
+    marginTop: spacing.sm,
   },
 });
