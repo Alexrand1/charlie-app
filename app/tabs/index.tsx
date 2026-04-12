@@ -10,6 +10,7 @@ import {
   Alert,
   Linking,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { api } from "@/services/api";
 import { auth, AuthUser } from "@/services/auth";
 import {
@@ -37,12 +38,28 @@ const INSIGHT_ICONS: Record<string, string> = {
   NONE: "💡",
 };
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function formatDate(): string {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 export default function HomeScreen() {
+  const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accounts, setAccounts] = useState<PlaidAccount[]>([]);
   const [transactions, setTransactions] = useState<PlaidTransaction[]>([]);
-  const [loading, setLoading] = useState(true);
   const [insights, setInsights] = useState<Insight[]>([]);
+  const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [generatingInsights, setGeneratingInsights] = useState(false);
@@ -50,7 +67,6 @@ export default function HomeScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      // Fetch profile
       try {
         const response = await api.get("/users/me");
         setUser(response.data.user);
@@ -59,12 +75,10 @@ export default function HomeScreen() {
         if (cached) setUser(cached);
       }
 
-      // Fetch accounts
       try {
         const accts = await getAccounts();
         setAccounts(accts);
 
-        // If we have accounts, also fetch recent transactions and insights
         if (accts.length > 0) {
           const [txns, insightData] = await Promise.all([
             getTransactions({ limit: 20 }).catch(() => []),
@@ -74,7 +88,7 @@ export default function HomeScreen() {
           setInsights(insightData);
         }
       } catch {
-        // No accounts yet, that's fine
+        // No accounts yet
       }
     } finally {
       setLoading(false);
@@ -96,14 +110,8 @@ export default function HomeScreen() {
       "Connect Bank",
       "Choose how to connect your bank account:",
       [
-        {
-          text: "Sandbox (Quick Test)",
-          onPress: handleSandboxConnect,
-        },
-        {
-          text: "Plaid Link (Browser)",
-          onPress: handlePlaidLink,
-        },
+        { text: "Sandbox (Quick Test)", onPress: handleSandboxConnect },
+        { text: "Plaid Link (Browser)", onPress: handlePlaidLink },
         { text: "Cancel", style: "cancel" },
       ]
     );
@@ -117,7 +125,7 @@ export default function HomeScreen() {
         "Bank Connected!",
         `${result.institution}: ${result.accounts} account(s) linked, ${result.transactions_synced} transactions synced.`
       );
-      fetchData(); // Refresh to show new accounts
+      fetchData();
     } catch (err: any) {
       Alert.alert(
         "Connection Failed",
@@ -172,7 +180,10 @@ export default function HomeScreen() {
     setSyncing(true);
     try {
       const result = await syncTransactions();
-      Alert.alert("Sync Complete", `${result.synced} new transaction(s) from ${result.items} item(s).`);
+      Alert.alert(
+        "Sync Complete",
+        `${result.synced} new transaction(s) from ${result.items} item(s).`
+      );
       fetchData();
     } catch (err: any) {
       Alert.alert("Sync Failed", err.response?.data?.message || err.message);
@@ -190,6 +201,9 @@ export default function HomeScreen() {
   }
 
   const hasAccounts = accounts.length > 0;
+  const netWorth = hasAccounts
+    ? accounts.reduce((sum, a) => sum + (a.currentBalance ?? 0), 0)
+    : null;
 
   return (
     <ScrollView
@@ -199,13 +213,67 @@ export default function HomeScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      {/* Greeting */}
-      <Text style={styles.greeting}>Hey, {user?.firstName || "there"}</Text>
-      <Text style={styles.subtitle}>
-        {hasAccounts ? "Here's your financial snapshot" : "Welcome to Charlie"}
+      {/* ─── Header ──────────────────────────────────── */}
+      <Text style={styles.greeting}>
+        {getGreeting()}, {user?.firstName || "there"}
       </Text>
+      <Text style={styles.date}>{formatDate()}</Text>
 
-      {/* Insights */}
+      {/* ─── Net Worth ───────────────────────────────── */}
+      <View style={styles.netWorthCard}>
+        <Text style={styles.netWorthLabel}>Net Worth</Text>
+        {netWorth !== null ? (
+          <Text style={styles.netWorthValue}>
+            ${netWorth.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          </Text>
+        ) : (
+          <View>
+            <Text style={styles.netWorthPlaceholder}>$—</Text>
+            <Text style={styles.netWorthHint}>
+              Link accounts to see your number
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* ─── Action Row ──────────────────────────────── */}
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={handleConnectBank}
+          disabled={connecting}
+        >
+          {connecting ? (
+            <ActivityIndicator size="small" color="#1B2A4A" />
+          ) : (
+            <>
+              <Text style={styles.actionIcon}>+</Text>
+              <Text style={styles.actionLabel}>Link Account</Text>
+            </>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => {}}>
+          <Text style={styles.actionIcon}>↗</Text>
+          <Text style={styles.actionLabel}>Transfer</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => {}}>
+          <Text style={styles.actionIcon}>📊</Text>
+          <Text style={styles.actionLabel}>Budget</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ─── Charlie CTA ─────────────────────────────── */}
+      <TouchableOpacity
+        style={styles.charlieCta}
+        onPress={() => router.push("/tabs/ask")}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.charlieCtaText}>
+          Ask Charlie anything about your money →
+        </Text>
+      </TouchableOpacity>
+
+      {/* ─── Insights ────────────────────────────────── */}
       {hasAccounts && insights.length > 0 && (
         <>
           <View style={styles.sectionHeader}>
@@ -214,7 +282,7 @@ export default function HomeScreen() {
               onPress={handleGenerateInsights}
               disabled={generatingInsights}
             >
-              <Text style={styles.addButton}>
+              <Text style={styles.linkBtn}>
                 {generatingInsights ? "Analyzing..." : "↻ Refresh"}
               </Text>
             </TouchableOpacity>
@@ -245,95 +313,26 @@ export default function HomeScreen() {
         </>
       )}
 
-      {/* Generate Insights CTA (when accounts exist but no insights) */}
-      {hasAccounts && insights.length === 0 && (
-        <TouchableOpacity
-          style={styles.generateCard}
-          onPress={handleGenerateInsights}
-          disabled={generatingInsights}
-          activeOpacity={0.8}
-        >
-          {generatingInsights ? (
-            <ActivityIndicator color="#1B2A4A" />
-          ) : (
-            <>
-              <Text style={styles.generateIcon}>✨</Text>
-              <Text style={styles.generateText}>
-                Get personalized insights from Charlie
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
-      )}
-
-      {/* Connect Bank Card (shown when no accounts) */}
-      {!hasAccounts && (
-        <TouchableOpacity
-          style={styles.connectCard}
-          onPress={handleConnectBank}
-          disabled={connecting}
-          activeOpacity={0.8}
-        >
-          {connecting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Text style={styles.connectIcon}>🏦</Text>
-              <Text style={styles.connectTitle}>Connect Your Bank</Text>
-              <Text style={styles.connectBody}>
-                Link your bank account to start tracking spending and get
-                personalized insights.
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
-      )}
-
-      {/* Accounts */}
-      {hasAccounts && (
-        <>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Accounts</Text>
-            <TouchableOpacity onPress={handleConnectBank} disabled={connecting}>
-              <Text style={styles.addButton}>+ Add</Text>
-            </TouchableOpacity>
-          </View>
-          {accounts.map((acct) => (
-            <View key={acct.accountId} style={styles.accountCard}>
-              <View style={styles.accountRow}>
-                <View>
-                  <Text style={styles.accountName}>{acct.name}</Text>
-                  <Text style={styles.accountType}>
-                    {acct.type} · {acct.subtype}
-                  </Text>
-                </View>
-                <Text style={styles.balance}>
-                  ${(acct.currentBalance ?? 0).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                  })}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </>
-      )}
-
-      {/* Transactions */}
-      {hasAccounts && (
+      {/* ─── Spending Module ─────────────────────────── */}
+      {hasAccounts ? (
         <>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Transactions</Text>
             <TouchableOpacity onPress={handleSync} disabled={syncing}>
-              <Text style={styles.addButton}>
+              <Text style={styles.linkBtn}>
                 {syncing ? "Syncing..." : "↻ Sync"}
               </Text>
             </TouchableOpacity>
           </View>
           {transactions.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>
-                No transactions yet. Tap Sync to pull from your bank.
-              </Text>
+            <View style={styles.moduleCard}>
+              <Text style={styles.moduleEmoji}>💳</Text>
+              <View style={styles.moduleContent}>
+                <Text style={styles.moduleTitle}>Spending</Text>
+                <Text style={styles.moduleHint}>
+                  Tap Sync to pull your latest transactions
+                </Text>
+              </View>
             </View>
           ) : (
             transactions.map((txn) => (
@@ -361,8 +360,123 @@ export default function HomeScreen() {
               </View>
             ))
           )}
+
+          {/* Accounts */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Accounts</Text>
+            <TouchableOpacity onPress={handleConnectBank} disabled={connecting}>
+              <Text style={styles.linkBtn}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
+          {accounts.map((acct) => (
+            <View key={acct.accountId} style={styles.accountCard}>
+              <View style={styles.accountRow}>
+                <View>
+                  <Text style={styles.accountName}>{acct.name}</Text>
+                  <Text style={styles.accountType}>
+                    {acct.type} · {acct.subtype}
+                  </Text>
+                </View>
+                <Text style={styles.balance}>
+                  ${(acct.currentBalance ?? 0).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                  })}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </>
+      ) : (
+        <>
+          {/* ─── Empty Modules ───────────────────────── */}
+          <TouchableOpacity
+            style={styles.moduleCard}
+            onPress={handleConnectBank}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.moduleEmoji}>💳</Text>
+            <View style={styles.moduleContent}>
+              <View style={styles.moduleRow}>
+                <Text style={styles.moduleTitle}>Spending</Text>
+                <Text style={styles.moduleLinkText}>Link</Text>
+              </View>
+              <Text style={styles.moduleHint}>
+                See where your money goes
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.moduleCard}
+            onPress={() => router.push("/tabs/goals")}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.moduleEmoji}>💰</Text>
+            <View style={styles.moduleContent}>
+              <View style={styles.moduleRow}>
+                <Text style={styles.moduleTitle}>Savings Goals</Text>
+                <Text style={styles.moduleLinkText}>Link</Text>
+              </View>
+              <Text style={styles.moduleHint}>
+                Track what you're building
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.moduleCard}
+            onPress={handleConnectBank}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.moduleEmoji}>📈</Text>
+            <View style={styles.moduleContent}>
+              <View style={styles.moduleRow}>
+                <Text style={styles.moduleTitle}>Investments</Text>
+                <Text style={styles.moduleLinkText}>Link</Text>
+              </View>
+              <Text style={styles.moduleHint}>
+                Watch your money grow
+              </Text>
+            </View>
+          </TouchableOpacity>
         </>
       )}
+
+      {/* ─── Generate Insights CTA ───────────────────── */}
+      {hasAccounts && insights.length === 0 && (
+        <TouchableOpacity
+          style={styles.generateCard}
+          onPress={handleGenerateInsights}
+          disabled={generatingInsights}
+          activeOpacity={0.8}
+        >
+          {generatingInsights ? (
+            <ActivityIndicator color="#1B2A4A" />
+          ) : (
+            <>
+              <Text style={styles.generateIcon}>✨</Text>
+              <Text style={styles.generateText}>
+                Get personalized insights from Charlie
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+
+      {/* ─── Bottom Status ───────────────────────────── */}
+      <View style={styles.bottomStatus}>
+        <Text style={styles.bottomText}>
+          Charlie connected {accounts.length} account
+          {accounts.length !== 1 ? "s" : ""}
+        </Text>
+        {!hasAccounts && (
+          <TouchableOpacity onPress={handleConnectBank}>
+            <Text style={styles.bottomLink}>
+              Connect your first account →
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -376,34 +490,87 @@ const styles = StyleSheet.create({
   },
   scroll: { flex: 1, backgroundColor: "#F5F7FA" },
   content: { padding: 20, paddingBottom: 40 },
+
+  // Header
   greeting: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "bold",
     color: "#1B2A4A",
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  subtitle: { fontSize: 16, color: "#666", marginBottom: 20 },
+  date: {
+    fontSize: 14,
+    color: "#94A3B8",
+    marginBottom: 20,
+  },
 
-  // Connect bank card
-  connectCard: {
+  // Net Worth
+  netWorthCard: {
     backgroundColor: "#1B2A4A",
     borderRadius: 16,
     padding: 24,
-    alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  connectIcon: { fontSize: 40, marginBottom: 12 },
-  connectTitle: {
-    fontSize: 20,
+  netWorthLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#94A3B8",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  netWorthValue: {
+    fontSize: 36,
     fontWeight: "bold",
     color: "#fff",
-    marginBottom: 8,
   },
-  connectBody: {
-    fontSize: 14,
-    color: "#94A3B8",
+  netWorthPlaceholder: {
+    fontSize: 36,
+    fontWeight: "bold",
+    color: "#475569",
+  },
+  netWorthHint: {
+    fontSize: 13,
+    color: "#64748B",
+    marginTop: 4,
+  },
+
+  // Action Row
+  actionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    gap: 10,
+  },
+  actionBtn: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  actionIcon: { fontSize: 20, marginBottom: 4 },
+  actionLabel: { fontSize: 12, fontWeight: "600", color: "#1B2A4A" },
+
+  // Charlie CTA
+  charlieCta: {
+    backgroundColor: "#EEF2FF",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#C7D2FE",
+  },
+  charlieCtaText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#4338CA",
     textAlign: "center",
-    lineHeight: 20,
   },
 
   // Section headers
@@ -415,7 +582,32 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   sectionTitle: { fontSize: 18, fontWeight: "600", color: "#1B2A4A" },
-  addButton: { fontSize: 14, fontWeight: "600", color: "#3B82F6" },
+  linkBtn: { fontSize: 14, fontWeight: "600", color: "#3B82F6" },
+
+  // Module cards (empty state)
+  moduleCard: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 10,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  moduleEmoji: { fontSize: 28, marginRight: 14 },
+  moduleContent: { flex: 1 },
+  moduleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  moduleTitle: { fontSize: 16, fontWeight: "600", color: "#1B2A4A" },
+  moduleLinkText: { fontSize: 13, fontWeight: "600", color: "#3B82F6" },
+  moduleHint: { fontSize: 13, color: "#94A3B8", marginTop: 2 },
 
   // Account cards
   accountCard: {
@@ -479,7 +671,12 @@ const styles = StyleSheet.create({
   },
   insightIcon: { fontSize: 20 },
   dismissBtn: { fontSize: 16, color: "#94A3B8", padding: 4 },
-  insightText: { fontSize: 14, color: "#1E293B", lineHeight: 20, marginBottom: 8 },
+  insightText: {
+    fontSize: 14,
+    color: "#1E293B",
+    lineHeight: 20,
+    marginBottom: 8,
+  },
   insightAction: {
     backgroundColor: "#FEF3C7",
     borderRadius: 8,
@@ -505,12 +702,24 @@ const styles = StyleSheet.create({
   generateIcon: { fontSize: 18, marginRight: 8 },
   generateText: { fontSize: 14, color: "#64748B", fontWeight: "500" },
 
-  // Empty state
-  emptyCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
+  // Bottom status
+  bottomStatus: {
     alignItems: "center",
+    paddingTop: 20,
+    paddingBottom: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    marginTop: 12,
   },
-  emptyText: { fontSize: 14, color: "#94A3B8", textAlign: "center" },
+  bottomText: {
+    fontSize: 13,
+    color: "#94A3B8",
+    marginBottom: 4,
+  },
+  bottomLink: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#3B82F6",
+    marginTop: 4,
+  },
 });

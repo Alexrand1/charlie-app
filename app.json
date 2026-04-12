@@ -26,15 +26,18 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "f10b929b-f223-4b1b-9d2a-dc62b141a027"
+      },
+      "router": {
+        "origin": false
       }
     },
-    "owner": "alexrand1",
+    "owner": "alexwrdev",
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": ""
+      "url": "https://u.expo.dev/f10b929b-f223-4b1b-9d2a-dc62b141a027"
     }
   }
 }
