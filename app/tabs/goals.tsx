@@ -10,6 +10,10 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import {
   getGoals,
@@ -229,7 +233,14 @@ export default function GoalsScreen() {
       </TouchableOpacity>
 
       <Modal visible={showModal} animationType="slide" transparent>
-        <View style={s.modalOverlay}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={s.modalOverlay} />
+        </TouchableWithoutFeedback>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={s.modalKeyboard}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={s.modalContent}>
             <Text style={s.modalTitle}>
               {editingGoal ? "Edit Goal" : "New Goal"}
@@ -317,7 +328,8 @@ export default function GoalsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -403,6 +415,8 @@ const s = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  modalKeyboard: {
     justifyContent: "flex-end",
   },
   modalContent: {
