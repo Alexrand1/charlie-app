@@ -34,7 +34,8 @@
     "production": {
       "ios": {
         "appleId": "alex.w.randall@gmail.com",
-        "ascAppId": "co.getcharlie.app"
+        "ascAppId": "6762312820",
+        "appleTeamId": "YNCHA48XP3"
       }
     }
   }
