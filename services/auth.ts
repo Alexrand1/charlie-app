@@ -34,6 +34,24 @@ export const auth = {
     return user;
   },
 
+  async signInWithApple(params: {
+    identityToken: string;
+    email?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  }): Promise<AuthUser> {
+    const response = await api.post("/auth/apple", {
+      identityToken: params.identityToken,
+      email: params.email || undefined,
+      firstName: params.firstName || undefined,
+      lastName: params.lastName || undefined,
+    });
+    const { token, user } = response.data;
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+    return user;
+  },
+
   async getToken(): Promise<string | null> {
     return AsyncStorage.getItem(TOKEN_KEY);
   },
