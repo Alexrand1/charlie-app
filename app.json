@@ -8,13 +8,18 @@
     "scheme": "charlie",
     "userInterfaceStyle": "light",
     "splash": {
-      "backgroundColor": "#1B2A4A"
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A1628"
     },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "co.getcharlie.app",
       "googleServicesFile": "./GoogleService-Info.plist",
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "co.getcharlie.app"
