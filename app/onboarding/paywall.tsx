@@ -8,37 +8,30 @@ import {
 import { useRouter } from "expo-router";
 import { useOnboarding } from "@/components/onboarding/OnboardingContext";
 import { OnboardingButton } from "@/components/onboarding/OnboardingButton";
-import { ProgressDots } from "@/components/onboarding/ProgressDots";
-import { colors, spacing, radii } from "@/constants/theme";
+import { colors, radii } from "@/constants/theme";
 
-const FEATURES = [
-  { icon: "🔍", text: "Unlimited savings scans" },
-  { icon: "💬", text: "Unlimited AI chat with Charlie" },
-  { icon: "📊", text: "Advanced spending insights" },
-  { icon: "🎯", text: "Smart goal tracking" },
-  { icon: "🔔", text: "Bill negotiation alerts" },
-  { icon: "📈", text: "Net worth tracking" },
+const PRO_FEATURES = [
+  "Cancels subscriptions for you",
+  "Negotiates bills automatically",
+  "Auto-saves to high-yield account",
+  "Personalized action queue",
+];
+
+const FREE_FEATURES = [
+  "View insights only",
+  "Manual actions",
 ];
 
 export default function PaywallScreen() {
   const router = useRouter();
-  const { state, update } = useOnboarding();
+  const { update } = useOnboarding();
   const [loading, setLoading] = useState(false);
 
-  const totalSavings = state.opportunities.reduce((sum, item) => {
-    const match = item.amount?.match(/\$(\d+(?:\.\d+)?)/);
-    return sum + (match ? parseFloat(match[1]) : 0);
-  }, 0);
-
-  async function handleSubscribe() {
+  async function handleStartPro() {
     setLoading(true);
     try {
       // STUB: In production, this would use expo-in-app-purchases / react-native-iap
-      // to purchase com.charlie.pro.annual.intro via StoreKit 2
-      // then POST /subscription/activate with the receipt
       await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Simulate successful purchase
       update({ userPlan: "pro" });
       router.push("/onboarding/complete");
     } catch (err: any) {
@@ -48,77 +41,82 @@ export default function PaywallScreen() {
     }
   }
 
-  function handleSkip() {
+  function handleFree() {
     update({ userPlan: "free" });
     router.push("/onboarding/complete");
   }
 
   return (
     <View style={s.container}>
-      <ProgressDots total={6} current={4} />
+      {/* Headline */}
+      <View style={s.header}>
+        <Text style={s.title}>
+          Unlock{"\n"}<Text style={s.titleItalic}>every action</Text>
+        </Text>
+        <Text style={s.subtitle}>
+          Charlie takes the actions. You keep the savings.
+        </Text>
+      </View>
 
-      <View style={s.content}>
-        {/* Header */}
-        <View style={s.header}>
-          <Text style={s.title}>Unlock your full{"\n"}financial picture</Text>
-          {totalSavings > 0 && (
-            <View style={s.savingsBadge}>
-              <Text style={s.savingsText}>
-                We found ${totalSavings.toFixed(0)}+ in potential savings
-              </Text>
-            </View>
-          )}
+      {/* Pro card */}
+      <View style={s.proCard}>
+        <View style={s.proHeader}>
+          <Text style={s.proTitle}>Charlie Pro</Text>
+          <View style={s.bestValueBadge}>
+            <Text style={s.bestValueText}>BEST VALUE</Text>
+          </View>
         </View>
 
-        {/* Features list */}
-        <View style={s.features}>
-          {FEATURES.map((f, i) => (
+        <View style={s.priceRow}>
+          <Text style={s.priceAmount}>$9.99 </Text>
+          <Text style={s.pricePeriod}>/ month</Text>
+        </View>
+
+        <Text style={s.yearlyNote}>
+          Or <Text style={s.yearlyHighlight}>$79/year</Text> — save 34%
+        </Text>
+
+        <View style={s.featureList}>
+          {PRO_FEATURES.map((f, i) => (
             <View key={i} style={s.featureRow}>
-              <Text style={s.featureIcon}>{f.icon}</Text>
-              <Text style={s.featureText}>{f.text}</Text>
+              <Text style={s.checkmark}>✓</Text>
+              <Text style={s.featureText}>{f}</Text>
             </View>
           ))}
         </View>
+      </View>
 
-        {/* Pricing card */}
-        <View style={s.pricingCard}>
-          <View style={s.pricingBadge}>
-            <Text style={s.pricingBadgeText}>7-DAY FREE TRIAL</Text>
-          </View>
-          <View style={s.pricingRow}>
-            <View>
-              <Text style={s.pricingTitle}>Charlie Pro</Text>
-              <Text style={s.pricingSubtitle}>Annual plan</Text>
+      {/* Free card */}
+      <View style={s.freeCard}>
+        <Text style={s.freeTitle}>Free</Text>
+        <View style={s.freePriceRow}>
+          <Text style={s.freePriceAmount}>$0 </Text>
+          <Text style={s.pricePeriod}>/ month</Text>
+        </View>
+        <View style={s.featureList}>
+          {FREE_FEATURES.map((f, i) => (
+            <View key={i} style={s.featureRow}>
+              <Text style={s.checkmark}>✓</Text>
+              <Text style={s.featureTextMuted}>{f}</Text>
             </View>
-            <View style={s.pricingAmount}>
-              <Text style={s.pricingPrice}>$4.99</Text>
-              <Text style={s.pricingPeriod}>/month</Text>
-            </View>
-          </View>
-          <Text style={s.pricingNote}>
-            $59.99/year after trial · Cancel anytime
-          </Text>
+          ))}
         </View>
       </View>
 
-      {/* Actions */}
-      <View style={s.actions}>
-        <OnboardingButton
-          title="Start Free Trial"
-          onPress={handleSubscribe}
-          loading={loading}
-        />
-        <OnboardingButton
-          title="Continue with free plan"
-          variant="ghost"
-          onPress={handleSkip}
-        />
-        <Text style={s.legal}>
-          Payment will be charged to your Apple ID account at the end of the
-          trial period. Subscription automatically renews unless cancelled at
-          least 24 hours before the end of the current period.
-        </Text>
-      </View>
+      <View style={{ flex: 1 }} />
+
+      {/* CTAs */}
+      <OnboardingButton
+        title="Start Pro"
+        onPress={handleStartPro}
+        loading={loading}
+        style={{ marginTop: 10 }}
+      />
+      <OnboardingButton
+        title="Continue with Free"
+        variant="ghost"
+        onPress={handleFree}
+      />
     </View>
   );
 }
@@ -127,113 +125,126 @@ const s = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.surface0,
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: 26,
     paddingTop: 60,
-    paddingBottom: 32,
-  },
-  content: {
-    flex: 1,
+    paddingBottom: 26,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   title: {
     fontSize: 28,
-    fontStyle: "italic",
     color: colors.cream,
+    fontWeight: "400",
     lineHeight: 36,
   },
-  savingsBadge: {
-    backgroundColor: "rgba(168,197,160,0.12)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-    marginTop: 12,
+  titleItalic: {
+    fontStyle: "italic",
   },
-  savingsText: {
+  subtitle: {
     fontSize: 13,
-    color: colors.sage,
-    fontWeight: "600",
+    color: colors.textSecondary,
+    marginTop: 6,
   },
-  features: {
-    gap: 14,
-    marginBottom: 24,
-  },
-  featureRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  featureIcon: {
-    fontSize: 18,
-  },
-  featureText: {
-    fontSize: 15,
-    color: colors.cream,
-  },
-  pricingCard: {
+  proCard: {
     backgroundColor: colors.surface1,
-    borderRadius: radii.lg,
-    padding: 18,
-    borderWidth: 1,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1.5,
     borderColor: colors.yellow,
+    marginBottom: 8,
   },
-  pricingBadge: {
-    backgroundColor: colors.yellow,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 4,
-    alignSelf: "flex-start",
-    marginBottom: 12,
-  },
-  pricingBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: colors.textOnYellow,
-    letterSpacing: 1,
-  },
-  pricingRow: {
+  proHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
   },
-  pricingTitle: {
-    fontSize: 18,
+  proTitle: {
+    fontSize: 15,
     fontWeight: "600",
     color: colors.cream,
   },
-  pricingSubtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 2,
+  bestValueBadge: {
+    backgroundColor: colors.yellow,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  pricingAmount: {
+  bestValueText: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.45,
+    color: colors.textOnYellow,
+  },
+  priceRow: {
     flexDirection: "row",
     alignItems: "baseline",
+    marginBottom: 4,
   },
-  pricingPrice: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: colors.yellow,
+  priceAmount: {
+    fontSize: 26,
+    fontStyle: "italic",
+    color: colors.cream,
   },
-  pricingPeriod: {
-    fontSize: 14,
+  pricePeriod: {
+    fontSize: 13,
     color: colors.textSecondary,
   },
-  pricingNote: {
+  yearlyNote: {
     fontSize: 12,
     color: colors.textSecondary,
+    marginBottom: 12,
   },
-  actions: {
-    gap: 8,
+  yearlyHighlight: {
+    color: colors.yellow,
+    fontWeight: "700",
   },
-  legal: {
-    fontSize: 10,
+  featureList: {
+    gap: 6,
+  },
+  featureRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+  },
+  checkmark: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: colors.yellow,
+    marginTop: 1,
+  },
+  featureText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 17,
+  },
+  featureTextMuted: {
+    fontSize: 12,
     color: colors.textMuted,
-    textAlign: "center",
-    lineHeight: 14,
-    marginTop: 4,
+    lineHeight: 17,
+  },
+  freeCard: {
+    backgroundColor: colors.surface1,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  freeTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.cream,
+    marginBottom: 6,
+  },
+  freePriceRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginBottom: 12,
+  },
+  freePriceAmount: {
+    fontSize: 20,
+    fontStyle: "italic",
+    color: colors.cream,
   },
 });

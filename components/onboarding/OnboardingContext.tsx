@@ -6,7 +6,9 @@ const ONBOARDING_COMPLETE_KEY = "charlie_onboarding_complete";
 export interface OnboardingState {
   /** User info collected during signup */
   firstName: string;
+  lastName: string;
   email: string;
+  phone: string;
   /** Whether bank was linked in step 3 */
   bankConnected: boolean;
   /** Number of accounts linked */
@@ -33,7 +35,9 @@ interface OnboardingContextType {
 
 const defaultState: OnboardingState = {
   firstName: "",
+  lastName: "",
   email: "",
+  phone: "",
   bankConnected: false,
   accountCount: 0,
   opportunities: [],

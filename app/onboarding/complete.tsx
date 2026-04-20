@@ -4,110 +4,101 @@ import {
   Text,
   StyleSheet,
   Animated,
-  FlatList,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useOnboarding, OpportunityItem } from "@/components/onboarding/OnboardingContext";
+import { useOnboarding } from "@/components/onboarding/OnboardingContext";
 import { OnboardingButton } from "@/components/onboarding/OnboardingButton";
 import { ProgressDots } from "@/components/onboarding/ProgressDots";
-import { colors, spacing, radii } from "@/constants/theme";
+import { colors, radii } from "@/constants/theme";
 
-interface ActionItem {
+type ActionState = "inProgress" | "queued";
+
+interface ActionPillData {
   id: string;
-  icon: string;
   title: string;
   subtitle: string;
-  type: "action" | "info";
+  state: ActionState;
 }
 
-function buildActionQueue(
-  bankConnected: boolean,
+function buildActions(
   plan: "free" | "pro",
-  opportunities: OpportunityItem[]
-): ActionItem[] {
-  const actions: ActionItem[] = [];
-
-  if (bankConnected && opportunities.length > 0) {
-    actions.push({
-      id: "savings",
-      icon: "💰",
-      title: `${opportunities.length} savings opportunities ready`,
-      subtitle: "Charlie will guide you through each one",
-      type: "action",
-    });
+  bankConnected: boolean
+): ActionPillData[] {
+  if (plan === "pro" && bankConnected) {
+    return [
+      {
+        id: "1",
+        title: "Canceling Peacock",
+        subtitle: "Saving $7.99/mo · In progress",
+        state: "inProgress",
+      },
+      {
+        id: "2",
+        title: "Negotiate Comcast",
+        subtitle: "Est. $29/mo savings · Queued",
+        state: "queued",
+      },
+      {
+        id: "3",
+        title: "Auto-save setup",
+        subtitle: "$50/wk to high-yield · Queued",
+        state: "queued",
+      },
+    ];
   }
 
-  actions.push({
-    id: "chat",
-    icon: "💬",
-    title: "Ask Charlie anything",
-    subtitle: "\"How much did I spend on food this month?\"",
-    type: "action",
-  });
-
+  // Free plan or no bank
+  const actions: ActionPillData[] = [];
   if (!bankConnected) {
     actions.push({
       id: "link",
-      icon: "🏦",
-      title: "Link your bank for full insights",
-      subtitle: "Head to Settings to connect your accounts",
-      type: "action",
+      title: "Connect your bank",
+      subtitle: "Link an account to unlock insights",
+      state: "queued",
     });
   }
-
   actions.push({
-    id: "goals",
-    icon: "🎯",
-    title: "Set your first savings goal",
-    subtitle: "Tell Charlie what you're saving for",
-    type: "action",
+    id: "chat",
+    title: "Ask Charlie anything",
+    subtitle: "Try: \"How much did I spend eating out?\"",
+    state: "queued",
   });
-
-  if (plan === "pro") {
-    actions.push({
-      id: "pro",
-      icon: "⭐",
-      title: "Pro features unlocked",
-      subtitle: "Unlimited scans, AI chat, and more",
-      type: "info",
-    });
-  }
-
+  actions.push({
+    id: "goal",
+    title: "Set your first goal",
+    subtitle: "Tell Charlie what you're saving for",
+    state: "queued",
+  });
   return actions;
 }
 
 export default function CompleteScreen() {
   const router = useRouter();
   const { state, completeOnboarding } = useOnboarding();
-  const [actions, setActions] = useState<ActionItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [actions, setActions] = useState<ActionPillData[]>([]);
+  const [showActions, setShowActions] = useState(false);
 
   // Animations
-  const checkScale = useRef(new Animated.Value(0)).current;
-  const titleFade = useRef(new Animated.Value(0)).current;
+  const iconScale = useRef(new Animated.Value(0)).current;
+  const headerFade = useRef(new Animated.Value(0)).current;
   const listFade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Build action queue with slight delay for skeleton effect
+    // Build actions after short delay for skeleton effect
     const timer = setTimeout(() => {
-      const queue = buildActionQueue(
-        state.bankConnected,
-        state.userPlan,
-        state.opportunities
-      );
-      setActions(queue);
-      setLoading(false);
-    }, 1200);
+      setActions(buildActions(state.userPlan, state.bankConnected));
+      setShowActions(true);
+    }, 800);
 
     // Entrance animations
     Animated.sequence([
-      Animated.spring(checkScale, {
+      Animated.spring(iconScale, {
         toValue: 1,
         tension: 60,
         friction: 8,
         useNativeDriver: true,
       }),
-      Animated.timing(titleFade, {
+      Animated.timing(headerFade, {
         toValue: 1,
         duration: 400,
         useNativeDriver: true,
@@ -122,78 +113,82 @@ export default function CompleteScreen() {
     return () => clearTimeout(timer);
   }, []);
 
-  async function handleContinue() {
+  async function handleDashboard() {
     await completeOnboarding();
     router.replace("/tabs");
   }
 
-  const renderAction = ({ item }: { item: ActionItem }) => (
-    <View style={s.actionCard}>
-      <Text style={s.actionIcon}>{item.icon}</Text>
-      <View style={s.actionContent}>
-        <Text style={s.actionTitle}>{item.title}</Text>
-        <Text style={s.actionSubtitle}>{item.subtitle}</Text>
-      </View>
-    </View>
-  );
-
-  const renderSkeleton = () => (
-    <View style={s.actionCard}>
-      <View style={s.skeletonIcon} />
-      <View style={s.actionContent}>
-        <View style={s.skeletonTitle} />
-        <View style={s.skeletonSubtitle} />
-      </View>
-    </View>
-  );
-
   return (
     <View style={s.container}>
-      <ProgressDots total={6} current={5} />
+      {/* Lightning bolt icon */}
+      <Animated.View style={[s.iconBox, { transform: [{ scale: iconScale }] }]}>
+        <Text style={s.iconEmoji}>⚡</Text>
+      </Animated.View>
 
-      {/* Celebration */}
-      <View style={s.celebration}>
-        <Animated.View
-          style={[s.checkCircle, { transform: [{ scale: checkScale }] }]}
-        >
-          <Text style={s.checkMark}>✓</Text>
-        </Animated.View>
-        <Animated.View style={{ opacity: titleFade }}>
-          <Text style={s.title}>
-            You're all set{state.firstName ? `, ${state.firstName}` : ""}!
+      {/* Headline */}
+      <Animated.View style={[s.headerSection, { opacity: headerFade }]}>
+        <Text style={s.title}>
+          Charlie's on it,{"\n"}
+          <Text style={s.titleItalic}>
+            {state.firstName || "friend"}
           </Text>
-          <Text style={s.subtitle}>
-            Charlie is ready to help you take control of your money.
-          </Text>
-        </Animated.View>
-      </View>
+        </Text>
+        <Text style={s.subtitle}>Here's what's happening right now.</Text>
+      </Animated.View>
 
-      {/* Action queue */}
-      <Animated.View style={[s.listSection, { opacity: listFade }]}>
-        <Text style={s.listLabel}>YOUR NEXT STEPS</Text>
-        {loading ? (
-          <View style={s.list}>
-            {renderSkeleton()}
-            {renderSkeleton()}
-            {renderSkeleton()}
-          </View>
+      {/* Action pills */}
+      <Animated.View style={[s.actionList, { opacity: listFade }]}>
+        {!showActions ? (
+          // Skeleton loaders
+          <>
+            <SkeletonPill />
+            <SkeletonPill />
+            <SkeletonPill />
+          </>
         ) : (
-          <FlatList
-            data={actions}
-            renderItem={renderAction}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={s.list}
-            showsVerticalScrollIndicator={false}
-          />
+          actions.map((action) => (
+            <View key={action.id} style={s.actionPill}>
+              <View style={s.actionPillLeft}>
+                <View
+                  style={[
+                    s.statusDot,
+                    action.state === "inProgress"
+                      ? s.statusDotActive
+                      : s.statusDotQueued,
+                  ]}
+                />
+              </View>
+              <View style={s.actionPillContent}>
+                <Text style={s.actionTitle}>{action.title}</Text>
+                <Text style={s.actionSubtitle}>{action.subtitle}</Text>
+              </View>
+            </View>
+          ))
         )}
       </Animated.View>
 
-      {/* CTA */}
-      <View style={s.actions}>
-        <OnboardingButton
-          title="Go to Dashboard"
-          onPress={handleContinue}
-        />
+      <View style={{ flex: 1 }} />
+
+      {/* Bottom */}
+      <ProgressDots total={5} current={4} />
+      <OnboardingButton
+        title="Go to my dashboard →"
+        onPress={handleDashboard}
+        style={{ marginTop: 10, backgroundColor: colors.surface2 }}
+      />
+    </View>
+  );
+}
+
+function SkeletonPill() {
+  return (
+    <View style={s.actionPill}>
+      <View style={s.actionPillLeft}>
+        <View style={[s.statusDot, s.statusDotQueued]} />
+      </View>
+      <View style={s.actionPillContent}>
+        <View style={s.skeletonTitle} />
+        <View style={s.skeletonSubtitle} />
       </View>
     </View>
   );
@@ -203,68 +198,71 @@ const s = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.surface0,
-    paddingHorizontal: spacing.xxl,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingHorizontal: 26,
+    paddingTop: 52,
+    paddingBottom: 26,
   },
-  celebration: {
-    alignItems: "center",
-    marginBottom: 28,
-  },
-  checkCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.yellow,
+  iconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: "rgba(245,200,66,0.1)",
+    borderWidth: 1.5,
+    borderColor: "rgba(245,200,66,0.2)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginTop: 16,
+    marginBottom: 14,
   },
-  checkMark: {
-    fontSize: 36,
-    color: colors.textOnYellow,
-    fontWeight: "700",
+  iconEmoji: {
+    fontSize: 24,
+  },
+  headerSection: {
+    marginBottom: 18,
   },
   title: {
     fontSize: 28,
-    fontStyle: "italic",
     color: colors.cream,
-    textAlign: "center",
-    marginBottom: 8,
+    fontWeight: "400",
+    lineHeight: 36,
+  },
+  titleItalic: {
+    fontStyle: "italic",
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 13,
     color: colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 22,
+    marginTop: 6,
   },
-  listSection: {
-    flex: 1,
+  actionList: {
+    gap: 7,
   },
-  listLabel: {
-    fontSize: 11,
-    color: colors.sage,
-    letterSpacing: 1.5,
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-  list: {
-    gap: 10,
-  },
-  actionCard: {
+  actionPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
     backgroundColor: colors.surface1,
     borderRadius: radii.md,
     padding: 14,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
+    gap: 12,
   },
-  actionIcon: {
-    fontSize: 22,
+  actionPillLeft: {
+    justifyContent: "center",
   },
-  actionContent: {
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  statusDotActive: {
+    backgroundColor: colors.yellow,
+  },
+  statusDotQueued: {
+    backgroundColor: colors.textSecondary,
+    opacity: 0.4,
+  },
+  actionPillContent: {
     flex: 1,
   },
   actionTitle: {
@@ -278,27 +276,17 @@ const s = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 17,
   },
-  skeletonIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: colors.surface2,
-  },
   skeletonTitle: {
-    width: "70%",
+    width: "60%",
     height: 14,
     borderRadius: 4,
     backgroundColor: colors.surface2,
     marginBottom: 6,
   },
   skeletonSubtitle: {
-    width: "90%",
+    width: "85%",
     height: 10,
     borderRadius: 4,
     backgroundColor: colors.surface2,
-  },
-  actions: {
-    gap: 8,
-    paddingTop: 8,
   },
 });

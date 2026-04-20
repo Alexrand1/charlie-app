@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
+  TouchableOpacity,
   Keyboard,
   Alert,
   ScrollView,
@@ -23,7 +24,9 @@ export default function SignUpScreen() {
   const router = useRouter();
   const { update } = useOnboarding();
   const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
@@ -40,7 +43,7 @@ export default function SignUpScreen() {
     return null;
   }
 
-  async function handleSignUp() {
+  async function handleCreate() {
     const error = validate();
     if (error) {
       Alert.alert("Hold on", error);
@@ -50,7 +53,12 @@ export default function SignUpScreen() {
     setLoading(true);
     try {
       await auth.register(email.trim(), password, firstName.trim());
-      update({ firstName: firstName.trim(), email: email.trim() });
+      update({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+      });
       router.push("/onboarding/connect");
     } catch (err: any) {
       const message =
@@ -86,6 +94,7 @@ export default function SignUpScreen() {
       });
       update({
         firstName: user.firstName || credential.fullName?.givenName || "",
+        lastName: credential.fullName?.familyName || "",
         email: user.email || credential.email || "",
       });
       router.push("/onboarding/connect");
@@ -112,35 +121,60 @@ export default function SignUpScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <ProgressDots total={6} current={1} />
+          {/* Back pill */}
+          <TouchableOpacity
+            style={s.backPill}
+            onPress={() => router.back()}
+          >
+            <Text style={s.backArrow}>‹</Text>
+            <Text style={s.backText}>Back</Text>
+          </TouchableOpacity>
 
+          {/* Headline */}
           <View style={s.header}>
-            <Text style={s.title}>Create your account</Text>
-            <Text style={s.subtitle}>
-              We just need a few details to get you started.
+            <Text style={s.title}>
+              Let's get{"\n"}you <Text style={s.titleItalic}>started</Text>
             </Text>
+            <Text style={s.subtitle}>Takes about 2 minutes.</Text>
           </View>
 
+          {/* Form */}
           <View style={s.form}>
-            <View style={s.inputGroup}>
-              <Text style={s.inputLabel}>FIRST NAME</Text>
-              <TextInput
-                style={s.input}
-                placeholder="Your first name"
-                placeholderTextColor={colors.textMuted}
-                value={firstName}
-                onChangeText={setFirstName}
-                autoCapitalize="words"
-                autoCorrect={false}
-                returnKeyType="next"
-              />
+            {/* First / Last name side by side */}
+            <View style={s.nameRow}>
+              <View style={[s.inputGroup, { flex: 1 }]}>
+                <Text style={s.inputLabel}>FIRST NAME</Text>
+                <TextInput
+                  style={s.input}
+                  placeholder="First name"
+                  placeholderTextColor={colors.textMuted}
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                />
+              </View>
+              <View style={[s.inputGroup, { flex: 1 }]}>
+                <Text style={s.inputLabel}>LAST NAME</Text>
+                <TextInput
+                  style={s.input}
+                  placeholder="Last name"
+                  placeholderTextColor={colors.textMuted}
+                  value={lastName}
+                  onChangeText={setLastName}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                />
+              </View>
             </View>
 
             <View style={s.inputGroup}>
               <Text style={s.inputLabel}>EMAIL</Text>
               <TextInput
                 style={s.input}
-                placeholder="you@example.com"
+                placeholder="you@email.com"
                 placeholderTextColor={colors.textMuted}
                 value={email}
                 onChangeText={setEmail}
@@ -152,51 +186,63 @@ export default function SignUpScreen() {
             </View>
 
             <View style={s.inputGroup}>
+              <Text style={s.inputLabel}>PHONE NUMBER</Text>
+              <TextInput
+                style={s.input}
+                placeholder="+1 (000) 000-0000"
+                placeholderTextColor={colors.textMuted}
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                returnKeyType="next"
+              />
+            </View>
+
+            <View style={s.inputGroup}>
               <Text style={s.inputLabel}>PASSWORD</Text>
               <TextInput
                 style={s.input}
-                placeholder="8+ characters"
+                placeholder="Create a password"
                 placeholderTextColor={colors.textMuted}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
                 returnKeyType="done"
-                onSubmitEditing={handleSignUp}
+                onSubmitEditing={handleCreate}
               />
             </View>
           </View>
 
-          <View style={s.actions}>
-            <OnboardingButton
-              title="Create Account"
-              onPress={handleSignUp}
-              loading={loading}
-            />
+          {/* Terms */}
+          <Text style={s.terms}>
+            By continuing you agree to Charlie's{" "}
+            <Text style={s.termsLink}>Terms</Text> &{" "}
+            <Text style={s.termsLink}>Privacy Policy</Text>
+          </Text>
 
-            {appleAvailable && (
-              <>
-                <View style={s.divider}>
-                  <View style={s.dividerLine} />
-                  <Text style={s.dividerText}>OR</Text>
-                  <View style={s.dividerLine} />
-                </View>
+          <View style={{ flex: 1 }} />
 
-                <AppleAuthentication.AppleAuthenticationButton
-                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
-                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-                  cornerRadius={radii.md}
-                  style={s.appleButton}
-                  onPress={handleAppleSignIn}
-                />
-              </>
-            )}
+          {/* Bottom section */}
+          <ProgressDots total={5} current={0} />
 
-            <OnboardingButton
-              title="Already have an account? Sign in"
-              variant="ghost"
-              onPress={() => router.replace("/auth/sign-in")}
-            />
-          </View>
+          <OnboardingButton
+            title="Create account"
+            onPress={handleCreate}
+            loading={loading}
+            style={{ marginTop: 10 }}
+          />
+
+          {appleAvailable && (
+            <TouchableOpacity
+              style={s.appleRow}
+              onPress={handleAppleSignIn}
+            >
+              <Text style={s.appleText}>
+                Or{" "}
+                <Text style={s.appleLink}>continue with Apple</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
@@ -210,68 +256,98 @@ const s = StyleSheet.create({
   },
   scroll: {
     flexGrow: 1,
-    paddingHorizontal: spacing.xxl,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingHorizontal: 26,
+    paddingTop: 52,
+    paddingBottom: 26,
+  },
+  backPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: colors.surface2,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 18,
+    gap: 4,
+  },
+  backArrow: {
+    fontSize: 18,
+    color: colors.cream,
+    fontWeight: "600",
+    marginTop: -1,
+  },
+  backText: {
+    fontSize: 13,
+    color: colors.cream,
+    fontWeight: "500",
   },
   header: {
-    marginBottom: 28,
+    marginBottom: 20,
   },
   title: {
     fontSize: 28,
-    fontStyle: "italic",
     color: colors.cream,
-    marginBottom: 8,
+    fontWeight: "400",
+    lineHeight: 36,
+  },
+  titleItalic: {
+    fontStyle: "italic",
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 13,
     color: colors.textSecondary,
-    lineHeight: 22,
+    marginTop: 7,
   },
   form: {
-    gap: 16,
-    marginBottom: 28,
+    gap: 9,
+  },
+  nameRow: {
+    flexDirection: "row",
+    gap: 8,
   },
   inputGroup: {
-    gap: 6,
+    gap: 5,
   },
   inputLabel: {
     fontSize: 11,
     color: colors.sage,
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
     fontWeight: "600",
   },
   input: {
-    height: 52,
+    height: 48,
     backgroundColor: colors.surface2,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.borderMid,
     paddingHorizontal: spacing.lg,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.cream,
   },
-  actions: {
-    gap: 12,
+  terms: {
+    fontSize: 10,
+    color: colors.textMuted,
+    lineHeight: 16,
+    marginTop: 10,
+    marginBottom: 18,
   },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 4,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.borderSubtle,
-  },
-  dividerText: {
+  termsLink: {
+    textDecorationLine: "underline",
     color: colors.textSecondary,
-    fontSize: 11,
-    letterSpacing: 1,
-    marginHorizontal: spacing.md,
   },
-  appleButton: {
-    width: "100%",
-    height: 54,
+  appleRow: {
+    alignItems: "center",
+    paddingVertical: 12,
+    marginTop: 4,
+  },
+  appleText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  appleLink: {
+    color: colors.cream,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
 });
