@@ -70,15 +70,17 @@ export default function HomeScreen() {
         // If no insights exist and user has linked accounts, generate on-demand
         if (ins.length === 0 && accts.length > 0) {
           try {
+            console.log("[Charlie] No insights found, generating via Claude...");
             const result = await generateInsights();
+            console.log("[Charlie] Generated", result.generated, "insight(s)");
             ins = result.insights;
-          } catch {
-            // Claude call may fail — that's okay, show empty state
+          } catch (genErr: any) {
+            console.error("[Charlie] Insight generation failed:", genErr.response?.status, genErr.response?.data || genErr.message);
           }
         }
         setInsights(ins);
-      } catch {
-        // No insights yet
+      } catch (fetchErr: any) {
+        console.error("[Charlie] Fetch insights failed:", fetchErr.response?.status, fetchErr.response?.data || fetchErr.message);
       }
     } finally {
       setLoading(false);
