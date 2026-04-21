@@ -56,6 +56,13 @@ export async function getAccounts(): Promise<PlaidAccount[]> {
 }
 
 /**
+ * Remove a linked account and its transactions.
+ */
+export async function removeAccount(accountId: string): Promise<void> {
+  await api.delete(`/plaid/accounts/${accountId}`);
+}
+
+/**
  * Trigger manual transaction sync for all linked items.
  */
 export async function syncTransactions() {

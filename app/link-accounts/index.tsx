@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import {
   BackPill,
@@ -8,7 +8,7 @@ import {
   CharlieSub,
   CharlieCard,
 } from "@/components/shared";
-import { getAccounts, PlaidAccount } from "@/services/plaid";
+import { getAccounts, removeAccount, PlaidAccount } from "@/services/plaid";
 import { usePlaidLink } from "@/hooks/usePlaidLink";
 import { colors } from "@/constants/theme";
 
@@ -34,6 +34,28 @@ export default function LinkAccountsScreen() {
   });
 
   const handleAddAccount = () => openLink();
+
+  const handleRemoveAccount = (acct: PlaidAccount) => {
+    Alert.alert(
+      "Remove Account",
+      `Remove ${acct.name}? This will also delete its transaction history.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await removeAccount(acct.accountId);
+              setAccounts((prev) => prev.filter((a) => a.accountId !== acct.accountId));
+            } catch (err: any) {
+              Alert.alert("Error", err.response?.data?.message || err.message);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <ScrollView style={s.scroll} contentContainerStyle={s.content}>
@@ -69,6 +91,14 @@ export default function LinkAccountsScreen() {
                 <Text style={s.bankBalance}>
                   ${(acct.currentBalance ?? 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
                 </Text>
+                <TouchableOpacity
+                  onPress={() => handleRemoveAccount(acct)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <View style={s.removeBadge}>
+                    <Text style={s.removeBadgeText}>Remove</Text>
+                  </View>
+                </TouchableOpacity>
               </View>
             </CharlieCard>
           ))}
@@ -128,7 +158,14 @@ const s = StyleSheet.create({
   },
   bankName: { fontSize: 13, fontWeight: "600", color: colors.ink },
   bankStatus: { fontSize: 10, fontWeight: "600", color: colors.positive, marginTop: 2 },
-  bankBalance: { fontSize: 13, fontWeight: "700", color: colors.ink },
+  bankBalance: { fontSize: 13, fontWeight: "700", color: colors.ink, marginRight: 4 },
+  removeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: "rgba(197,48,48,0.08)",
+    borderRadius: 6,
+  },
+  removeBadgeText: { fontSize: 10, fontWeight: "700", color: colors.negative },
   addRow: {
     flexDirection: "row",
     alignItems: "center",

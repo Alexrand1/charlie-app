@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Alert } from "react-native";
 import { getLinkToken, exchangePublicToken, getAccounts, PlaidAccount } from "@/services/plaid";
 
@@ -16,7 +16,7 @@ let PlaidSDK: any = null;
 try {
   PlaidSDK = require("react-native-plaid-link-sdk");
 } catch {
-  console.log("react-native-plaid-link-sdk not installed — Plaid Link disabled");
+  // SDK not installed — openLink will show an alert
 }
 
 interface UsePlaidLinkOptions {
@@ -30,6 +30,8 @@ export function usePlaidLink(options: UsePlaidLinkOptions = {}) {
   const [loading, setLoading] = useState(false);
   const [linked, setLinked] = useState(false);
   const [accounts, setAccounts] = useState<PlaidAccount[]>([]);
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const openLink = useCallback(async () => {
     if (!PlaidSDK) {
@@ -45,14 +47,15 @@ export function usePlaidLink(options: UsePlaidLinkOptions = {}) {
       // 1. Get a fresh link token from our API
       const linkToken = await getLinkToken();
 
-      // 2. Open Plaid Link natively
+      // 2. create() configures the token, open() launches the modal with callbacks
+      PlaidSDK.create({ token: linkToken });
+
       const result = await new Promise<{
         success: boolean;
         publicToken?: string;
         institutionName?: string;
       }>((resolve) => {
-        PlaidSDK!.open({
-          tokenConfig: { token: linkToken, noLoadingState: false },
+        PlaidSDK.open({
           onSuccess: (success: any) => {
             resolve({
               success: true,
@@ -67,11 +70,12 @@ export function usePlaidLink(options: UsePlaidLinkOptions = {}) {
             }
             resolve({ success: false });
           },
+          iOSPresentationStyle: "FULL_SCREEN",
         });
       });
 
       if (!result.success || !result.publicToken) {
-        options.onExit?.();
+        optionsRef.current.onExit?.();
         return;
       }
 
@@ -83,7 +87,7 @@ export function usePlaidLink(options: UsePlaidLinkOptions = {}) {
       setAccounts(freshAccounts);
       setLinked(true);
 
-      options.onSuccess?.(freshAccounts, result.institutionName || "Your bank");
+      optionsRef.current.onSuccess?.(freshAccounts, result.institutionName || "Your bank");
     } catch (err: any) {
       console.error("[Plaid Link Error]", err);
       Alert.alert(
@@ -93,7 +97,7 @@ export function usePlaidLink(options: UsePlaidLinkOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [options]);
+  }, []);
 
   return { openLink, loading, linked, accounts };
 }
