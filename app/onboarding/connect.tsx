@@ -37,7 +37,8 @@ export default function ConnectScreen() {
       if (accounts && accounts.length > 0) {
         setLinked(true);
         setAccountCount(accounts.length);
-        setInstitutionName("Chase"); // TODO: get from Plaid metadata
+        const instName = accounts[0]?.name?.split(" ")[0] || "your bank";
+        setInstitutionName(instName);
         update({ bankConnected: true, accountCount: accounts.length });
       }
     } catch (err: any) {
@@ -137,7 +138,7 @@ export default function ConnectScreen() {
       ) : (
         <>
           <OnboardingButton
-            title={linked ? "Analyze my money" : "Analyze my money"}
+            title={linked ? "See your savings" : "Analyze my money"}
             onPress={linked ? () => router.push("/onboarding/results") : handleLinkBank}
             style={{ marginTop: 10 }}
           />

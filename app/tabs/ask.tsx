@@ -10,6 +10,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { sendMessage, ChatMessage } from "@/services/chat";
 import { MarkdownText } from "@/components/chat/MarkdownText";
 import { colors, spacing, radii, fonts } from "@/constants/theme";
@@ -76,6 +77,7 @@ function CharlieAvatar({ size = 24 }: { size?: number }) {
 
 // ─── Main Screen ─────────────────────────────────────────────
 export default function AskCharlieScreen() {
+  const router = useRouter();
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -170,7 +172,17 @@ export default function AskCharlieScreen() {
           <View style={s.cardRow}>
             <View style={{ width: 24 }} />
             <View style={{ flex: 1, marginLeft: 8 }}>
-              <InlineCard card={item.actionCard} />
+              <InlineCard
+                card={item.actionCard}
+                onAction={(label) => {
+                  // Route to relevant action screen based on button label
+                  const lower = label.toLowerCase();
+                  if (lower.includes("cancel")) router.push("/actions/cancel-subscription" as any);
+                  else if (lower.includes("move")) router.push("/actions/move-money" as any);
+                  else if (lower.includes("invest")) router.push("/actions/invest-surplus" as any);
+                  else if (lower.includes("fix") || lower.includes("cap")) router.push("/actions/fix-habit" as any);
+                }}
+              />
             </View>
           </View>
         )}
@@ -292,7 +304,7 @@ export default function AskCharlieScreen() {
 }
 
 // ─── Inline Action Card Component ────────────────────────────
-function InlineCard({ card }: { card: ActionCard }) {
+function InlineCard({ card, onAction }: { card: ActionCard; onAction?: (label: string) => void }) {
   switch (card.kind) {
     case "action":
       return (
@@ -307,6 +319,7 @@ function InlineCard({ card }: { card: ActionCard }) {
                   s.actionCardBtn,
                   btn.primary ? s.actionCardBtnPrimary : s.actionCardBtnSecondary,
                 ]}
+                onPress={() => onAction?.(btn.label)}
                 activeOpacity={0.7}
               >
                 <Text

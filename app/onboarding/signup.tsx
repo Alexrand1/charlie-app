@@ -11,6 +11,7 @@ import {
   Keyboard,
   Alert,
   ScrollView,
+  Linking,
 } from "react-native";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { useRouter } from "expo-router";
@@ -216,8 +217,8 @@ export default function SignUpScreen() {
           {/* Terms */}
           <Text style={s.terms}>
             By continuing you agree to Charlie's{" "}
-            <Text style={s.termsLink}>Terms</Text> &{" "}
-            <Text style={s.termsLink}>Privacy Policy</Text>
+            <Text style={s.termsLink} onPress={() => Linking.openURL("https://charlie.app/terms")}>Terms</Text> &{" "}
+            <Text style={s.termsLink} onPress={() => Linking.openURL("https://charlie.app/privacy")}>Privacy Policy</Text>
           </Text>
 
           <View style={{ flex: 1 }} />

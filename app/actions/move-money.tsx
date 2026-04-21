@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import {
   BackPill,
@@ -55,7 +55,15 @@ export default function MoveMoneyScreen() {
           <TouchableOpacity
             key={c}
             style={[s.chip, selected === c && s.chipActive]}
-            onPress={() => setSelected(c)}
+            onPress={() => {
+              if (c === "Custom") {
+                Alert.prompt("Custom amount", "Enter the amount to move", (value) => {
+                  if (value) setSelected(`$${value}`);
+                });
+              } else {
+                setSelected(c);
+              }
+            }}
             activeOpacity={0.7}
           >
             <Text style={[s.chipText, selected === c && s.chipTextActive]}>

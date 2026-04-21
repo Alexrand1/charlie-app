@@ -143,6 +143,18 @@ export default function HomeScreen() {
     }
   };
 
+  const handleActionPress = (insight: Insight) => {
+    const routes: Record<string, string> = {
+      MOVE_MONEY: "/actions/move-money",
+      STOP_LEAK: "/actions/cancel-subscription",
+      PATTERN: "/actions/fix-habit",
+    };
+    const route = routes[insight.actionType];
+    if (route) {
+      router.push(route as any);
+    }
+  };
+
   const handleDismissInsight = async (insight: Insight) => {
     try {
       await dismissInsight(insight.insightId, insight.createdAt);
@@ -261,6 +273,7 @@ export default function HomeScreen() {
                 <View style={s.actionBtns}>
                   <TouchableOpacity
                     style={s.actionPrimaryBtn}
+                    onPress={() => handleActionPress(insight)}
                     activeOpacity={0.7}
                   >
                     <Text style={s.actionPrimaryText}>
@@ -346,7 +359,7 @@ export default function HomeScreen() {
         )}
 
         {/* ─── Referral Strip ──────────────────────────── */}
-        <TouchableOpacity style={s.referralStrip} activeOpacity={0.7}>
+        <TouchableOpacity style={s.referralStrip} activeOpacity={0.7} onPress={() => router.push("/referral" as any)}>
           <Text style={s.referralText}>🎁  Give $10, get $10</Text>
           <Text style={s.referralCta}>Invite →</Text>
         </TouchableOpacity>

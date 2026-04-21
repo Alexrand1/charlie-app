@@ -6,6 +6,7 @@ import {
   CharlieCard,
 } from "@/components/shared";
 import { colors } from "@/constants/theme";
+import { copyToClipboard } from "@/utils/clipboard";
 
 const STEPS = [
   "Share your code or link",
@@ -58,7 +59,7 @@ export default function ReferralHubScreen() {
         onPress={() => router.push("/referral/share")}
       />
       <View style={{ height: 8 }} />
-      <CTAButton title="Copy invite link" variant="sand" />
+      <CTAButton title="Copy invite link" variant="sand" onPress={() => copyToClipboard("https://charlie.app/invite/CHARLIE10", "Link copied!")} />
     </ScrollView>
   );
 }

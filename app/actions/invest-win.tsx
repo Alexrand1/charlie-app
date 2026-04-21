@@ -45,7 +45,7 @@ export default function InvestWinScreen() {
 
         <View style={{ flex: 1 }} />
 
-        <TouchableOpacity style={s.btn} onPress={() => router.replace("/tabs")} activeOpacity={0.8}>
+        <TouchableOpacity style={s.btn} onPress={() => router.replace("/tabs/goals" as any)} activeOpacity={0.8}>
           <Text style={[s.btnText, { color: BG }]}>See portfolio</Text>
         </TouchableOpacity>
         <Text style={s.actionsWaiting}>1 more action waiting</Text>

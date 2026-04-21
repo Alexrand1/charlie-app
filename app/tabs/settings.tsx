@@ -7,23 +7,68 @@ import {
   ScrollView,
   Switch,
   Alert,
+  Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { auth, AuthUser } from "@/services/auth";
 import { getAccounts, PlaidAccount } from "@/services/plaid";
+import { getInsights, Insight } from "@/services/insights";
+import { registerForPushNotifications } from "@/services/notifications";
 import { colors, spacing, radii } from "@/constants/theme";
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accounts, setAccounts] = useState<PlaidAccount[]>([]);
+  const [insights, setInsights] = useState<Insight[]>([]);
   const [notifications, setNotifications] = useState(true);
-  const [faceId, setFaceId] = useState(true);
+  const [faceId, setFaceId] = useState(false);
 
   useEffect(() => {
     auth.getUser().then(setUser);
     getAccounts().then(setAccounts).catch(() => {});
+    getInsights().then(setInsights).catch(() => {});
   }, []);
+
+  const handleNotificationToggle = async (value: boolean) => {
+    setNotifications(value);
+    if (value) {
+      const token = await registerForPushNotifications();
+      if (!token) {
+        Alert.alert(
+          "Notifications",
+          "Please enable notifications in your device settings.",
+          [{ text: "Open Settings", onPress: () => Linking.openSettings() }, { text: "Cancel", style: "cancel" }]
+        );
+        setNotifications(false);
+      }
+    }
+  };
+
+  const handleFaceIdToggle = async (value: boolean) => {
+    try {
+      const LocalAuth = require("expo-local-authentication");
+      const compatible = await LocalAuth.hasHardwareAsync();
+      if (!compatible) {
+        Alert.alert("Not Available", "Biometric authentication is not available on this device.");
+        return;
+      }
+      const enrolled = await LocalAuth.isEnrolledAsync();
+      if (!enrolled) {
+        Alert.alert("Not Set Up", "Please set up Face ID or Touch ID in your device settings.");
+        return;
+      }
+      if (value) {
+        const result = await LocalAuth.authenticateAsync({ promptMessage: "Enable biometric unlock" });
+        if (result.success) setFaceId(true);
+      } else {
+        setFaceId(false);
+      }
+    } catch {
+      // expo-local-authentication not installed
+      Alert.alert("Coming Soon", "Biometric unlock will be available in a future update.");
+    }
+  };
 
   const handleSignOut = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -46,6 +91,11 @@ export default function ProfileScreen() {
     ? [...new Set(accounts.map((a) => a.name.split(" ")[0]))].join(" · ")
     : "None connected";
 
+  // Compute stats from real data
+  const totalSaved = accounts.reduce((sum, a) => sum + (a.currentBalance ?? 0), 0);
+  const actionsCount = insights.filter((i) => i.actionType !== "NONE").length;
+  const leaksCount = insights.filter((i) => i.actionType === "STOP_LEAK").length;
+
   return (
     <ScrollView style={s.scroll} contentContainerStyle={s.content}>
       {/* ─── Avatar Header ─────────────────────────────── */}
@@ -62,17 +112,17 @@ export default function ProfileScreen() {
       {/* ─── Stats Card ────────────────────────────────── */}
       <View style={s.statsCard}>
         <View style={s.statCell}>
-          <Text style={s.statNumber}>$0</Text>
+          <Text style={s.statNumber}>${totalSaved > 0 ? totalSaved.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "0"}</Text>
           <Text style={s.statLabel}>saved</Text>
         </View>
         <View style={s.statDivider} />
         <View style={s.statCell}>
-          <Text style={s.statNumber}>0</Text>
+          <Text style={s.statNumber}>{actionsCount}</Text>
           <Text style={s.statLabel}>actions</Text>
         </View>
         <View style={s.statDivider} />
         <View style={s.statCell}>
-          <Text style={s.statNumber}>0</Text>
+          <Text style={s.statNumber}>{leaksCount}</Text>
           <Text style={s.statLabel}>leaks</Text>
         </View>
       </View>
@@ -86,18 +136,20 @@ export default function ProfileScreen() {
           trailing={
             <Switch
               value={notifications}
-              onValueChange={setNotifications}
+              onValueChange={handleNotificationToggle}
               trackColor={{ true: colors.blue, false: colors.surface2 }}
               thumbColor="#fff"
             />
           }
         />
         <View style={s.divider} />
-        <SettingsRow
-          icon="🏦"
-          label="Connected banks"
-          sub={bankNames}
-        />
+        <TouchableOpacity onPress={() => router.push("/link-accounts" as any)}>
+          <SettingsRow
+            icon="🏦"
+            label="Connected banks"
+            sub={bankNames}
+          />
+        </TouchableOpacity>
         <View style={s.divider} />
         <SettingsRow
           icon="🔐"
@@ -106,21 +158,27 @@ export default function ProfileScreen() {
           trailing={
             <Switch
               value={faceId}
-              onValueChange={setFaceId}
+              onValueChange={handleFaceIdToggle}
               trackColor={{ true: colors.blue, false: colors.surface2 }}
               thumbColor="#fff"
             />
           }
         />
         <View style={s.divider} />
-        <SettingsRow icon="✨" label="Charlie Pro" sub="Manage subscription" />
+        <TouchableOpacity onPress={() => router.push("/onboarding/paywall" as any)}>
+          <SettingsRow icon="✨" label="Charlie Pro" sub="Manage subscription" />
+        </TouchableOpacity>
       </View>
 
       {/* ─── Support Card ──────────────────────────────── */}
       <View style={s.card}>
-        <SettingsRow icon="❓" label="Help & Support" />
+        <TouchableOpacity onPress={() => Linking.openURL("mailto:support@charlie.app")}>
+          <SettingsRow icon="❓" label="Help & Support" />
+        </TouchableOpacity>
         <View style={s.divider} />
-        <SettingsRow icon="🔒" label="Privacy Policy" />
+        <TouchableOpacity onPress={() => Linking.openURL("https://charlie.app/privacy")}>
+          <SettingsRow icon="🔒" label="Privacy Policy" />
+        </TouchableOpacity>
         <View style={s.divider} />
         <TouchableOpacity onPress={handleSignOut}>
           <SettingsRow icon="🚪" label="Sign out" destructive />

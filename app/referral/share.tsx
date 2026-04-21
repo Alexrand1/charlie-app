@@ -1,6 +1,7 @@
-import { View, Text, StyleSheet, TouchableOpacity, Share, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Share } from "react-native";
 import { useRouter } from "expo-router";
 import { colors } from "@/constants/theme";
+import { copyToClipboard } from "@/utils/clipboard";
 
 const SHARE_OPTIONS = [
   { icon: "💬", label: "Messages" },
@@ -24,7 +25,7 @@ export default function ShareSheetScreen() {
   };
 
   const handleCopy = () => {
-    Alert.alert("Copied!", "Referral code copied to clipboard.");
+    copyToClipboard("https://charlie.app/invite/CHARLIE10", "Copied!");
   };
 
   return (

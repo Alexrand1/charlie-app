@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import {
   BackPill,
@@ -72,7 +72,17 @@ export default function FixHabitScreen() {
 
       <View style={{ flex: 1, minHeight: 40 }} />
 
-      <CTAButton title="Set a weekly cap" variant="blue" onPress={() => router.back()} />
+      <CTAButton
+        title="Set a weekly cap"
+        variant="blue"
+        onPress={() =>
+          Alert.alert(
+            "Weekly Cap Set",
+            "Charlie will alert you when your spending approaches this limit.",
+            [{ text: "Got it", onPress: () => router.back() }]
+          )
+        }
+      />
       <View style={{ height: 8 }} />
       <CTAButton title="Not now" variant="sand" onPress={() => router.back()} />
     </ScrollView>
