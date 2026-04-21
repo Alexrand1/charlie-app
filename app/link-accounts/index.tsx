@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import {
   BackPill,
@@ -8,10 +8,9 @@ import {
   CharlieSub,
   CharlieCard,
 } from "@/components/shared";
-import { getAccounts, getLinkToken, PlaidAccount } from "@/services/plaid";
+import { getAccounts, PlaidAccount } from "@/services/plaid";
+import { usePlaidLink } from "@/hooks/usePlaidLink";
 import { colors } from "@/constants/theme";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:3000";
 
 const ADD_CATEGORIES = [
   { emoji: "🐷", title: "Savings", sub: "High-yield or checking savings" },
@@ -28,16 +27,13 @@ export default function LinkAccountsScreen() {
     getAccounts().then(setAccounts).catch(() => {});
   }, []);
 
-  const handleAddAccount = async () => {
-    try {
-      const linkToken = await getLinkToken();
-      await Linking.openURL(
-        `${API_URL}/plaid/link-page?link_token=${linkToken}&scheme=charlie`
-      );
-    } catch (err: any) {
-      Alert.alert("Error", err.response?.data?.message || err.message);
-    }
-  };
+  const { openLink } = usePlaidLink({
+    onSuccess: (freshAccounts) => {
+      setAccounts(freshAccounts);
+    },
+  });
+
+  const handleAddAccount = () => openLink();
 
   return (
     <ScrollView style={s.scroll} contentContainerStyle={s.content}>

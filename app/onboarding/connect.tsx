@@ -1,10 +1,8 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  Linking,
-  Alert,
   ActivityIndicator,
   TouchableOpacity,
 } from "react-native";
@@ -12,55 +10,26 @@ import { useRouter } from "expo-router";
 import { useOnboarding } from "@/components/onboarding/OnboardingContext";
 import { OnboardingButton } from "@/components/onboarding/OnboardingButton";
 import { ProgressDots } from "@/components/onboarding/ProgressDots";
-import { getLinkToken, sandboxConnect, getAccounts } from "@/services/plaid";
+import { usePlaidLink } from "@/hooks/usePlaidLink";
 import { colors, spacing, radii } from "@/constants/theme";
 
 export default function ConnectScreen() {
   const router = useRouter();
   const { update } = useOnboarding();
-  const [loading, setLoading] = useState(false);
   const [linked, setLinked] = useState(false);
   const [accountCount, setAccountCount] = useState(0);
   const [institutionName, setInstitutionName] = useState("");
 
-  const handleLinkBank = useCallback(async () => {
-    setLoading(true);
-    try {
-      const linkToken = await getLinkToken();
-      const baseUrl = (await import("@/services/api")).api.defaults.baseURL;
-      const linkUrl = `${baseUrl}/plaid/link-page?link_token=${linkToken}`;
-      await Linking.openURL(linkUrl);
+  const { openLink, loading } = usePlaidLink({
+    onSuccess: (accounts, instName) => {
+      setLinked(true);
+      setAccountCount(accounts.length);
+      setInstitutionName(instName);
+      update({ bankConnected: true, accountCount: accounts.length });
+    },
+  });
 
-      // After user returns, check if accounts were linked
-      await new Promise((r) => setTimeout(r, 2000));
-      const accounts = await getAccounts();
-      if (accounts && accounts.length > 0) {
-        setLinked(true);
-        setAccountCount(accounts.length);
-        const instName = accounts[0]?.name?.split(" ")[0] || "your bank";
-        setInstitutionName(instName);
-        update({ bankConnected: true, accountCount: accounts.length });
-      }
-    } catch (err: any) {
-      try {
-        await sandboxConnect();
-        const accounts = await getAccounts();
-        if (accounts && accounts.length > 0) {
-          setLinked(true);
-          setAccountCount(accounts.length);
-          setInstitutionName("First Platypus Bank");
-          update({ bankConnected: true, accountCount: accounts.length });
-        }
-      } catch {
-        Alert.alert(
-          "Connection Issue",
-          "We couldn't connect to your bank right now. You can try again later from Settings."
-        );
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [update]);
+  const handleLinkBank = () => openLink();
 
   return (
     <View style={s.container}>

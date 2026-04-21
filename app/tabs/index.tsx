@@ -8,7 +8,6 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
-  Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { api } from "@/services/api";
@@ -16,16 +15,13 @@ import { auth, AuthUser } from "@/services/auth";
 import {
   getAccounts,
   getTransactions,
-  sandboxConnect,
   syncTransactions,
-  getLinkToken,
   PlaidAccount,
   PlaidTransaction,
 } from "@/services/plaid";
 import { getInsights, dismissInsight, Insight } from "@/services/insights";
+import { usePlaidLink } from "@/hooks/usePlaidLink";
 import { colors, spacing, radii } from "@/constants/theme";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:3000";
 
 // ─── Tag display mapping for insight action types ────────────
 const ACTION_TAG: Record<string, string> = {
@@ -42,7 +38,7 @@ export default function HomeScreen() {
   const [transactions, setTransactions] = useState<PlaidTransaction[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
-  const [connecting, setConnecting] = useState(false);
+
   const [syncing, setSyncing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -89,46 +85,13 @@ export default function HomeScreen() {
     fetchData();
   }, [fetchData]);
 
-  const handleConnectBank = () => {
-    Alert.alert("Connect Bank", "Choose how to connect:", [
-      { text: "Sandbox (Quick Test)", onPress: handleSandboxConnect },
-      { text: "Plaid Link (Browser)", onPress: handlePlaidLink },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  };
-
-  const handleSandboxConnect = async () => {
-    setConnecting(true);
-    try {
-      const result = await sandboxConnect();
-      Alert.alert(
-        "Bank Connected!",
-        `${result.institution}: ${result.accounts} account(s), ${result.transactions_synced} transactions synced.`
-      );
+  const { openLink: openPlaidLink, loading: plaidLoading } = usePlaidLink({
+    onSuccess: () => {
       fetchData();
-    } catch (err: any) {
-      Alert.alert(
-        "Connection Failed",
-        err.response?.data?.message || err.message
-      );
-    } finally {
-      setConnecting(false);
-    }
-  };
+    },
+  });
 
-  const handlePlaidLink = async () => {
-    setConnecting(true);
-    try {
-      const linkToken = await getLinkToken();
-      await Linking.openURL(
-        `${API_URL}/plaid/link-page?link_token=${linkToken}&scheme=charlie`
-      );
-    } catch (err: any) {
-      Alert.alert("Error", err.response?.data?.message || err.message);
-    } finally {
-      setConnecting(false);
-    }
-  };
+  const handleConnectBank = () => openPlaidLink();
 
   const handleSync = async () => {
     setSyncing(true);
