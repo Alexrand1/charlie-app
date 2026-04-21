@@ -88,8 +88,8 @@ export default function LinkAccountsScreen() {
                   <Text style={s.bankName}>{acct.name}</Text>
                   <Text style={s.bankStatus}>● Connected</Text>
                 </View>
-                <Text style={s.bankBalance}>
-                  ${(acct.currentBalance ?? 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                <Text style={[s.bankBalance, ["credit", "loan"].includes(acct.type) && s.debtBalance]}>
+                  {["credit", "loan"].includes(acct.type) ? "-" : ""}${(acct.currentBalance ?? 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
                 </Text>
                 <TouchableOpacity
                   onPress={() => handleRemoveAccount(acct)}
@@ -184,6 +184,7 @@ const s = StyleSheet.create({
   bankName: { fontSize: 13, fontWeight: "600", color: colors.ink },
   bankStatus: { fontSize: 10, fontWeight: "600", color: colors.positive, marginTop: 2 },
   bankBalance: { fontSize: 13, fontWeight: "700", color: colors.ink, marginRight: 4 },
+  debtBalance: { color: colors.negative },
   removeBadge: {
     paddingHorizontal: 8,
     paddingVertical: 5,

@@ -91,8 +91,12 @@ export default function ProfileScreen() {
     ? [...new Set(accounts.map((a) => a.name.split(" ")[0]))].join(" · ")
     : "None connected";
 
-  // Compute stats from real data
-  const totalSaved = accounts.reduce((sum, a) => sum + (a.currentBalance ?? 0), 0);
+  // Compute stats from real data — subtract debt account balances
+  const DEBT_TYPES = ["credit", "loan"];
+  const totalSaved = accounts.reduce((sum, a) => {
+    const bal = a.currentBalance ?? 0;
+    return sum + (DEBT_TYPES.includes(a.type) ? -bal : bal);
+  }, 0);
   const actionsCount = insights.filter((i) => i.actionType !== "NONE").length;
   const leaksCount = insights.filter((i) => i.actionType === "STOP_LEAK").length;
 

@@ -138,8 +138,12 @@ export default function HomeScreen() {
   }
 
   const hasAccounts = accounts.length > 0;
+  const DEBT_TYPES = ["credit", "loan"];
   const totalBalance = hasAccounts
-    ? accounts.reduce((sum, a) => sum + (a.currentBalance ?? 0), 0)
+    ? accounts.reduce((sum, a) => {
+        const bal = a.currentBalance ?? 0;
+        return sum + (DEBT_TYPES.includes(a.type) ? -bal : bal);
+      }, 0)
     : null;
 
   return (
@@ -194,7 +198,7 @@ export default function HomeScreen() {
                     : acct.name}
                 </Text>
                 <Text style={s.chipValue}>
-                  $
+                  {DEBT_TYPES.includes(acct.type) ? "-" : ""}$
                   {(acct.currentBalance ?? 0).toLocaleString("en-US", {
                     maximumFractionDigits: 0,
                   })}
