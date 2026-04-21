@@ -8,7 +8,7 @@ import {
   CharlieSub,
   CharlieCard,
 } from "@/components/shared";
-import { getAccounts, removeAccount, PlaidAccount } from "@/services/plaid";
+import { getAccounts, removeAccount, removeAllItems, PlaidAccount } from "@/services/plaid";
 import { usePlaidLink } from "@/hooks/usePlaidLink";
 import { colors } from "@/constants/theme";
 
@@ -102,6 +102,31 @@ export default function LinkAccountsScreen() {
               </View>
             </CharlieCard>
           ))}
+          <TouchableOpacity
+            onPress={() =>
+              Alert.alert(
+                "Remove All Accounts",
+                "This will remove all linked banks, accounts, and transaction history. You can re-link afterwards.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Remove All",
+                    style: "destructive",
+                    onPress: async () => {
+                      try {
+                        await removeAllItems();
+                        setAccounts([]);
+                      } catch (err: any) {
+                        Alert.alert("Error", err.response?.data?.message || err.message);
+                      }
+                    },
+                  },
+                ]
+              )
+            }
+          >
+            <Text style={s.removeAllText}>Remove all accounts</Text>
+          </TouchableOpacity>
           <View style={{ height: 16 }} />
         </>
       )}
@@ -166,6 +191,13 @@ const s = StyleSheet.create({
     borderRadius: 6,
   },
   removeBadgeText: { fontSize: 10, fontWeight: "700", color: colors.negative },
+  removeAllText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.negative,
+    textAlign: "center",
+    marginTop: 8,
+  },
   addRow: {
     flexDirection: "row",
     alignItems: "center",

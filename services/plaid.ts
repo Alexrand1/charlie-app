@@ -63,6 +63,15 @@ export async function removeAccount(accountId: string): Promise<void> {
 }
 
 /**
+ * Remove ALL linked items, accounts, and transactions.
+ * Nuclear option for cleaning up sandbox data.
+ */
+export async function removeAllItems(): Promise<{ itemsRemoved: number; accountsRemoved: number }> {
+  const response = await api.delete("/plaid/items");
+  return response.data;
+}
+
+/**
  * Trigger manual transaction sync for all linked items.
  */
 export async function syncTransactions() {
