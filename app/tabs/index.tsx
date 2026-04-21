@@ -15,7 +15,7 @@ import { auth, AuthUser } from "@/services/auth";
 import {
   getAccounts,
   getTransactions,
-  syncTransactions,
+  syncAllItems,
   PlaidAccount,
   PlaidTransaction,
 } from "@/services/plaid";
@@ -96,8 +96,11 @@ export default function HomeScreen() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const result = await syncTransactions();
-      Alert.alert("Sync Complete", `${result.synced} new transaction(s).`);
+      const result = await syncAllItems();
+      const msg = result.errors.length > 0
+        ? `${result.totalSynced} new transaction(s). ${result.errors.length} item(s) failed.`
+        : `${result.totalSynced} new transaction(s).`;
+      Alert.alert("Sync Complete", msg);
       fetchData();
     } catch (err: any) {
       Alert.alert("Sync Failed", err.response?.data?.message || err.message);

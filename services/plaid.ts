@@ -72,11 +72,39 @@ export async function removeAllItems(): Promise<{ itemsRemoved: number; accounts
 }
 
 /**
- * Trigger manual transaction sync for all linked items.
+ * Get the user's Plaid items (for per-item sync).
  */
-export async function syncTransactions() {
-  const response = await api.post("/plaid/sync");
+export async function getPlaidItems(): Promise<{ itemId: string; institutionName?: string }[]> {
+  const response = await api.get("/plaid/items");
+  return response.data.items;
+}
+
+/**
+ * Sync transactions for a single Plaid item.
+ */
+export async function syncItem(itemId: string): Promise<{ synced: number }> {
+  const response = await api.post(`/plaid/sync/${itemId}`);
   return response.data;
+}
+
+/**
+ * Sync all items sequentially (one at a time to avoid timeouts).
+ */
+export async function syncAllItems(): Promise<{ totalSynced: number; errors: string[] }> {
+  const items = await getPlaidItems();
+  let totalSynced = 0;
+  const errors: string[] = [];
+
+  for (const item of items) {
+    try {
+      const result = await syncItem(item.itemId);
+      totalSynced += result.synced;
+    } catch (err: any) {
+      errors.push(`${item.institutionName || item.itemId}: ${err.message}`);
+    }
+  }
+
+  return { totalSynced, errors };
 }
 
 /**
