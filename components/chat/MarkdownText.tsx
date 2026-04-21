@@ -119,7 +119,7 @@ const s = StyleSheet.create({
   code: {
     fontFamily: "Courier",
     fontSize: 13,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(26,20,16,0.06)",
     paddingHorizontal: 3,
   },
 });

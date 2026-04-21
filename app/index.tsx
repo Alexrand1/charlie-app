@@ -32,7 +32,7 @@ export default function IndexScreen() {
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color={colors.yellow} />
+      <ActivityIndicator size="large" color={colors.blue} />
     </View>
   );
 }

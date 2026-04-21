@@ -7,7 +7,7 @@ export default function RewardEarnedScreen() {
   const router = useRouter();
 
   return (
-    <WinBackground color={colors.navyLight}>
+    <WinBackground color={colors.blue}>
       <View style={s.container}>
         <View style={{ flex: 1 }} />
 
@@ -81,5 +81,5 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  btnText: { fontSize: 15, fontWeight: "600", color: colors.navyLight },
+  btnText: { fontSize: 15, fontWeight: "600", color: colors.blue },
 });

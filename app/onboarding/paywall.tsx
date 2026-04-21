@@ -134,7 +134,7 @@ const s = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    color: colors.cream,
+    color: colors.ink,
     fontWeight: "400",
     lineHeight: 36,
   },
@@ -151,7 +151,7 @@ const s = StyleSheet.create({
     borderRadius: 18,
     padding: 16,
     borderWidth: 1.5,
-    borderColor: colors.yellow,
+    borderColor: colors.blue,
     marginBottom: 8,
   },
   proHeader: {
@@ -163,10 +163,10 @@ const s = StyleSheet.create({
   proTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: colors.cream,
+    color: colors.ink,
   },
   bestValueBadge: {
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.blue,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -175,7 +175,7 @@ const s = StyleSheet.create({
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.45,
-    color: colors.textOnYellow,
+    color: colors.textOnBlue,
   },
   priceRow: {
     flexDirection: "row",
@@ -185,7 +185,7 @@ const s = StyleSheet.create({
   priceAmount: {
     fontSize: 26,
     fontStyle: "italic",
-    color: colors.cream,
+    color: colors.ink,
   },
   pricePeriod: {
     fontSize: 13,
@@ -197,7 +197,7 @@ const s = StyleSheet.create({
     marginBottom: 12,
   },
   yearlyHighlight: {
-    color: colors.yellow,
+    color: colors.blue,
     fontWeight: "700",
   },
   featureList: {
@@ -211,7 +211,7 @@ const s = StyleSheet.create({
   checkmark: {
     fontSize: 12,
     fontWeight: "900",
-    color: colors.yellow,
+    color: colors.blue,
     marginTop: 1,
   },
   featureText: {
@@ -234,7 +234,7 @@ const s = StyleSheet.create({
   freeTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: colors.cream,
+    color: colors.ink,
     marginBottom: 6,
   },
   freePriceRow: {
@@ -245,6 +245,6 @@ const s = StyleSheet.create({
   freePriceAmount: {
     fontSize: 20,
     fontStyle: "italic",
-    color: colors.cream,
+    color: colors.ink,
   },
 });

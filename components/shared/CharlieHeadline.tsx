@@ -30,7 +30,7 @@ export function CharlieSub({ text }: { text: string }) {
 const s = StyleSheet.create({
   base: {
     fontWeight: "400",
-    color: colors.cream,
+    color: colors.ink,
     lineHeight: 34,
   },
   italic: {

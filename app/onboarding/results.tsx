@@ -144,13 +144,13 @@ const s = StyleSheet.create({
   },
   eyebrowText: {
     fontSize: 12,
-    color: colors.yellow,
+    color: colors.blue,
     fontWeight: "600",
     letterSpacing: 0.3,
   },
   title: {
     fontSize: 28,
-    color: colors.cream,
+    color: colors.ink,
     fontWeight: "400",
     lineHeight: 36,
   },
@@ -187,12 +187,12 @@ const s = StyleSheet.create({
   itemName: {
     fontSize: 13,
     fontWeight: "500",
-    color: colors.cream,
+    color: colors.ink,
   },
   itemValue: {
     fontSize: 13,
     fontWeight: "700",
-    color: colors.yellow,
+    color: colors.blue,
   },
   helpText: {
     fontSize: 12,

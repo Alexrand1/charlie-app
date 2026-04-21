@@ -87,7 +87,7 @@ export default function ProfileScreen() {
             <Switch
               value={notifications}
               onValueChange={setNotifications}
-              trackColor={{ true: colors.yellow, false: colors.surface2 }}
+              trackColor={{ true: colors.blue, false: colors.surface2 }}
               thumbColor="#fff"
             />
           }
@@ -107,7 +107,7 @@ export default function ProfileScreen() {
             <Switch
               value={faceId}
               onValueChange={setFaceId}
-              trackColor={{ true: colors.yellow, false: colors.surface2 }}
+              trackColor={{ true: colors.blue, false: colors.surface2 }}
               thumbColor="#fff"
             />
           }
@@ -178,22 +178,22 @@ const s = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: colors.navyLight,
+    backgroundColor: colors.blue,
     justifyContent: "center",
     alignItems: "center",
   },
   avatarText: {
     fontSize: 22,
     fontStyle: "italic",
-    color: "#fff",
+    color: colors.textOnBlue,
   },
-  name: { fontSize: 17, fontWeight: "700", color: colors.cream },
+  name: { fontSize: 17, fontWeight: "700", color: colors.ink },
   email: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
 
   // Stats
   statsCard: {
     flexDirection: "row",
-    backgroundColor: colors.navyLight,
+    backgroundColor: colors.blue,
     borderRadius: 16,
     padding: 16,
     marginBottom: 14,
@@ -202,13 +202,13 @@ const s = StyleSheet.create({
   statNumber: {
     fontSize: 22,
     fontStyle: "italic",
-    color: "#fff",
+    color: colors.textOnBlue,
   },
-  statLabel: { fontSize: 10, color: "rgba(255,255,255,0.7)", marginTop: 2 },
+  statLabel: { fontSize: 10, color: "rgba(245,240,232,0.7)", marginTop: 2 },
   statDivider: {
     width: 1,
     height: 34,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(245,240,232,0.2)",
   },
 
   // Card
@@ -242,7 +242,7 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  settingsLabel: { fontSize: 13, fontWeight: "600", color: colors.cream },
+  settingsLabel: { fontSize: 13, fontWeight: "600", color: colors.ink },
   settingsSub: { fontSize: 10, color: colors.textSecondary, marginTop: 2 },
   destructiveText: { color: colors.negative },
 

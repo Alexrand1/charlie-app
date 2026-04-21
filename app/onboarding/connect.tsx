@@ -131,7 +131,7 @@ export default function ConnectScreen() {
 
       {loading ? (
         <View style={s.loadingContainer}>
-          <ActivityIndicator size="small" color={colors.yellow} />
+          <ActivityIndicator size="small" color={colors.blue} />
           <Text style={s.loadingText}>Connecting to your bank...</Text>
         </View>
       ) : (
@@ -175,13 +175,13 @@ const s = StyleSheet.create({
   },
   backArrow: {
     fontSize: 18,
-    color: colors.cream,
+    color: colors.ink,
     fontWeight: "600",
     marginTop: -1,
   },
   backText: {
     fontSize: 13,
-    color: colors.cream,
+    color: colors.ink,
     fontWeight: "500",
   },
   header: {
@@ -189,7 +189,7 @@ const s = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    color: colors.cream,
+    color: colors.ink,
     fontWeight: "400",
     lineHeight: 36,
   },
@@ -251,7 +251,7 @@ const s = StyleSheet.create({
   bankName: {
     fontSize: 14,
     fontWeight: "600",
-    color: colors.cream,
+    color: colors.ink,
   },
   bankStatus: {
     fontSize: 11,
@@ -272,7 +272,7 @@ const s = StyleSheet.create({
   addAnother: {
     fontSize: 13,
     fontWeight: "600",
-    color: colors.yellow,
+    color: colors.blue,
   },
   trustCopy: {
     fontSize: 12,

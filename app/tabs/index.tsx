@@ -157,7 +157,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <View style={s.centered}>
-        <ActivityIndicator size="large" color={colors.yellow} />
+        <ActivityIndicator size="large" color={colors.blue} />
       </View>
     );
   }
@@ -176,7 +176,7 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.yellow}
+            tintColor={colors.blue}
           />
         }
       >
@@ -302,7 +302,7 @@ export default function HomeScreen() {
             <View style={s.sectionRow}>
               <Text style={s.sectionLabel}>RECENT TRANSACTIONS</Text>
               <TouchableOpacity onPress={handleSync} disabled={syncing}>
-                <Text style={s.yellowLink}>
+                <Text style={s.blueLink}>
                   {syncing ? "Syncing..." : "↻ Sync"}
                 </Text>
               </TouchableOpacity>
@@ -426,7 +426,7 @@ const s = StyleSheet.create({
   greeting: {
     fontSize: 15,
     fontWeight: "600",
-    color: colors.cream,
+    color: colors.ink,
     marginBottom: 14,
   },
 
@@ -434,7 +434,7 @@ const s = StyleSheet.create({
   balanceLabel: {
     fontSize: 9,
     fontWeight: "600",
-    color: colors.textSecondary,
+    color: colors.muted,
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
@@ -442,7 +442,7 @@ const s = StyleSheet.create({
     fontSize: 42,
     fontWeight: "400",
     fontStyle: "italic",
-    color: colors.cream,
+    color: colors.ink,
   },
   balanceTrend: {
     fontSize: 10,
@@ -454,12 +454,12 @@ const s = StyleSheet.create({
     fontSize: 42,
     fontWeight: "400",
     fontStyle: "italic",
-    color: colors.textMuted,
+    color: colors.mutedLt,
   },
   linkAccounts: {
     fontSize: 14,
     fontWeight: "600",
-    color: colors.yellow,
+    color: colors.blue,
     marginTop: spacing.sm,
     marginBottom: 14,
   },
@@ -478,13 +478,13 @@ const s = StyleSheet.create({
   },
   chipLabel: {
     fontSize: 9,
-    color: colors.textSecondary,
+    color: colors.muted,
     marginBottom: 2,
   },
   chipValue: {
     fontSize: 12,
     fontWeight: "600",
-    color: colors.cream,
+    color: colors.ink,
   },
   addChip: {
     backgroundColor: "transparent",
@@ -499,7 +499,7 @@ const s = StyleSheet.create({
   addChipText: {
     fontSize: 11,
     fontWeight: "600",
-    color: colors.yellow,
+    color: colors.blue,
   },
 
   // ── Actions Header ──────────────────────────────────────
@@ -512,7 +512,7 @@ const s = StyleSheet.create({
   sectionLabel: {
     fontSize: 9,
     fontWeight: "700",
-    color: colors.textSecondary,
+    color: colors.muted,
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
@@ -520,7 +520,7 @@ const s = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: colors.navyLight,
+    backgroundColor: colors.blue,
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 6,
@@ -557,21 +557,21 @@ const s = StyleSheet.create({
   actionTag: {
     fontSize: 9,
     fontWeight: "700",
-    color: colors.yellow,
+    color: colors.blue,
     letterSpacing: 0.6,
     textTransform: "uppercase",
     marginBottom: 6,
   },
   actionBody: {
     fontSize: 13,
-    color: colors.cream,
+    color: colors.ink,
     lineHeight: 19,
     marginBottom: 12,
   },
   actionBtns: { flexDirection: "row", gap: 8 },
   actionPrimaryBtn: {
     flex: 1,
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.blue,
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: "center",
@@ -579,7 +579,7 @@ const s = StyleSheet.create({
   actionPrimaryText: {
     fontSize: 13,
     fontWeight: "600",
-    color: colors.textOnYellow,
+    color: colors.textOnBlue,
   },
   actionSecondaryBtn: {
     flex: 1,
@@ -605,7 +605,7 @@ const s = StyleSheet.create({
     fontSize: 22,
     fontWeight: "400",
     fontStyle: "italic",
-    color: colors.cream,
+    color: colors.ink,
     marginBottom: 8,
   },
   allClearSub: {
@@ -639,7 +639,7 @@ const s = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: colors.cream,
+    color: colors.ink,
   },
   cardMeta: {
     fontSize: 12,
@@ -649,12 +649,12 @@ const s = StyleSheet.create({
   amountText: {
     fontSize: 16,
     fontWeight: "400",
-    color: colors.cream,
+    color: colors.ink,
   },
-  yellowLink: {
+  blueLink: {
     fontSize: 13,
     fontWeight: "600",
-    color: colors.yellow,
+    color: colors.blue,
   },
 
   // ── Referral Strip ──────────────────────────────────────
@@ -662,7 +662,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: colors.navyLight,
+    backgroundColor: colors.blue,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -671,12 +671,12 @@ const s = StyleSheet.create({
   referralText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#fff",
+    color: colors.textOnBlue,
   },
   referralCta: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#fff",
+    color: colors.textOnBlue,
   },
 
   // ── Module Cards (empty state) ──────────────────────────
@@ -696,7 +696,7 @@ const s = StyleSheet.create({
   },
   ghostBtn: {
     borderWidth: 1,
-    borderColor: colors.yellow,
+    borderColor: colors.blue,
     borderRadius: radii.sm,
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -704,7 +704,7 @@ const s = StyleSheet.create({
   ghostBtnText: {
     fontSize: 13,
     fontWeight: "600",
-    color: colors.yellow,
+    color: colors.blue,
   },
 
   // ── Chat FAB ────────────────────────────────────────────
@@ -718,7 +718,7 @@ const s = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     borderWidth: 2,
-    borderColor: "rgba(22,40,68,0.5)",
+    borderColor: "rgba(13,20,96,0.3)",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -726,7 +726,7 @@ const s = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.navyLight,
+    backgroundColor: colors.blue,
     justifyContent: "center",
     alignItems: "center",
   },

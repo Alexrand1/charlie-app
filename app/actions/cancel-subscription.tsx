@@ -33,7 +33,7 @@ export default function CancelSubscriptionScreen() {
       <CharlieCard cornerRadius={14} padding={14}>
         <View style={s.subRow}>
           <View style={s.subIcon}>
-            <Text style={{ fontSize: 18, color: "#fff" }}>▶</Text>
+            <Text style={{ fontSize: 18, color: colors.textOnBlue }}>▶</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.subName}>Paramount+</Text>
@@ -85,13 +85,13 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: colors.navyLight,
+    backgroundColor: colors.blue,
     justifyContent: "center",
     alignItems: "center",
   },
-  subName: { fontSize: 13, fontWeight: "600", color: colors.cream },
+  subName: { fontSize: 13, fontWeight: "600", color: colors.ink },
   subMeta: { fontSize: 10, color: colors.textSecondary, marginTop: 2 },
-  subPrice: { fontSize: 12, fontWeight: "700", color: colors.cream },
+  subPrice: { fontSize: 12, fontWeight: "700", color: colors.ink },
   divider: { height: 1, backgroundColor: colors.borderSubtle, marginBottom: 10 },
   statsRow: {
     flexDirection: "row",
@@ -109,6 +109,6 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(224,112,112,0.25)",
   },
-  alertTitle: { fontSize: 12, fontWeight: "600", color: colors.cream },
+  alertTitle: { fontSize: 12, fontWeight: "600", color: colors.ink },
   alertSub: { fontSize: 10, color: colors.textSecondary, marginTop: 2 },
 });

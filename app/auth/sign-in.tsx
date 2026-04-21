@@ -137,7 +137,7 @@ export default function SignInScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color={colors.textOnYellow} />
+            <ActivityIndicator color={colors.textOnBlue} />
           ) : (
             <Text style={s.buttonText}>
               {isSignUp ? "Create Account" : "Sign In"}
@@ -200,7 +200,7 @@ const s = StyleSheet.create({
   logo: {
     fontSize: 40,
     fontStyle: "italic",
-    color: colors.cream,
+    color: colors.ink,
     marginBottom: spacing.sm,
   },
   subtitle: {
@@ -218,12 +218,12 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     fontSize: 16,
     marginBottom: spacing.md,
-    color: colors.cream,
+    color: colors.ink,
   },
   button: {
     width: "100%",
     height: 50,
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.blue,
     borderRadius: radii.md,
     justifyContent: "center",
     alignItems: "center",
@@ -233,7 +233,7 @@ const s = StyleSheet.create({
     opacity: 0.7,
   },
   buttonText: {
-    color: colors.textOnYellow,
+    color: colors.textOnBlue,
     fontSize: 16,
     fontWeight: "600",
   },

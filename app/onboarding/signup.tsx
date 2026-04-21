@@ -273,13 +273,13 @@ const s = StyleSheet.create({
   },
   backArrow: {
     fontSize: 18,
-    color: colors.cream,
+    color: colors.ink,
     fontWeight: "600",
     marginTop: -1,
   },
   backText: {
     fontSize: 13,
-    color: colors.cream,
+    color: colors.ink,
     fontWeight: "500",
   },
   header: {
@@ -287,7 +287,7 @@ const s = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    color: colors.cream,
+    color: colors.ink,
     fontWeight: "400",
     lineHeight: 36,
   },
@@ -323,7 +323,7 @@ const s = StyleSheet.create({
     borderColor: colors.borderMid,
     paddingHorizontal: spacing.lg,
     fontSize: 15,
-    color: colors.cream,
+    color: colors.ink,
   },
   terms: {
     fontSize: 10,
@@ -346,7 +346,7 @@ const s = StyleSheet.create({
     color: colors.textSecondary,
   },
   appleLink: {
-    color: colors.cream,
+    color: colors.ink,
     fontWeight: "600",
     textDecorationLine: "underline",
   },

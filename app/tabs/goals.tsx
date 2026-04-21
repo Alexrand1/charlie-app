@@ -26,7 +26,7 @@ import { colors, spacing, radii } from "@/constants/theme";
 
 const GOAL_TYPES = [
   { key: "save", label: "Save", icon: "💰", color: colors.sage },
-  { key: "spend_limit", label: "Limit", icon: "🎯", color: colors.yellow },
+  { key: "spend_limit", label: "Limit", icon: "🎯", color: colors.blue },
   { key: "pay_off", label: "Pay Off", icon: "💳", color: colors.negative },
 ];
 
@@ -145,7 +145,7 @@ export default function GoalsScreen() {
   if (loading) {
     return (
       <View style={s.centered}>
-        <ActivityIndicator size="large" color={colors.yellow} />
+        <ActivityIndicator size="large" color={colors.blue} />
       </View>
     );
   }
@@ -158,7 +158,7 @@ export default function GoalsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.yellow}
+            tintColor={colors.blue}
           />
         }
       >
@@ -319,7 +319,7 @@ export default function GoalsScreen() {
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator color={colors.textOnYellow} size="small" />
+                  <ActivityIndicator color={colors.textOnBlue} size="small" />
                 ) : (
                   <Text style={s.saveBtnText}>
                     {editingGoal ? "Update" : "Create"}
@@ -351,7 +351,7 @@ const s = StyleSheet.create({
   emptyTitle: {
     fontSize: 22,
     fontWeight: "bold",
-    color: colors.cream,
+    color: colors.ink,
     marginBottom: spacing.sm,
   },
   emptySubtitle: {
@@ -374,9 +374,9 @@ const s = StyleSheet.create({
   goalHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   goalIcon: { fontSize: 28, marginRight: 12 },
   goalInfo: { flex: 1 },
-  goalLabel: { fontSize: 16, fontWeight: "600", color: colors.cream },
+  goalLabel: { fontSize: 16, fontWeight: "600", color: colors.ink },
   goalType: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  goalAmount: { fontSize: 16, fontWeight: "bold", color: colors.cream },
+  goalAmount: { fontSize: 16, fontWeight: "bold", color: colors.ink },
   goalTarget: { fontSize: 14, fontWeight: "normal", color: colors.textSecondary },
 
   progressBg: {
@@ -400,7 +400,7 @@ const s = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.blue,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
@@ -409,7 +409,7 @@ const s = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  fabIcon: { fontSize: 28, color: colors.textOnYellow, fontWeight: "300" },
+  fabIcon: { fontSize: 28, color: colors.textOnBlue, fontWeight: "300" },
 
   // Modal
   modalOverlay: {
@@ -429,7 +429,7 @@ const s = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: colors.cream,
+    color: colors.ink,
     marginBottom: spacing.xl,
   },
 
@@ -455,7 +455,7 @@ const s = StyleSheet.create({
     borderColor: colors.borderMid,
     padding: 14,
     fontSize: 15,
-    color: colors.cream,
+    color: colors.ink,
     marginBottom: spacing.md,
   },
 
@@ -472,9 +472,9 @@ const s = StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: radii.md,
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.blue,
     alignItems: "center",
   },
   saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText: { fontSize: 15, fontWeight: "600", color: colors.textOnYellow },
+  saveBtnText: { fontSize: 15, fontWeight: "600", color: colors.textOnBlue },
 });

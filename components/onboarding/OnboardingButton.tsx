@@ -43,7 +43,7 @@ export function OnboardingButton({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === "primary" ? colors.textOnYellow : colors.cream}
+          color={variant === "primary" ? colors.textOnBlue : colors.ink}
         />
       ) : (
         <Text
@@ -70,7 +70,7 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   primary: {
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.blue,
   },
   secondary: {
     backgroundColor: colors.surface2,
@@ -88,10 +88,10 @@ const s = StyleSheet.create({
     fontWeight: "600",
   },
   textPrimary: {
-    color: colors.textOnYellow,
+    color: colors.textOnBlue,
   },
   textSecondary: {
-    color: colors.cream,
+    color: colors.ink,
   },
   textGhost: {
     color: colors.textSecondary,

@@ -19,17 +19,17 @@ export function CTAButton({
   style,
 }: CTAButtonProps) {
   const bg = {
-    blue: colors.navyLight,
+    blue: colors.blue,
     green: "#2D6A4F",
     sand: colors.surface2,
     ghost: "transparent",
   }[variant];
 
   const fg = {
-    blue: "#fff",
+    blue: colors.textOnBlue,
     green: "#fff",
-    sand: colors.textSecondary,
-    ghost: colors.textSecondary,
+    sand: colors.ink,
+    ghost: colors.muted,
   }[variant];
 
   return (

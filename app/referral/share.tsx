@@ -98,7 +98,7 @@ const s = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: "600",
-    color: colors.cream,
+    color: colors.ink,
     textAlign: "center",
     marginBottom: 16,
   },
@@ -117,7 +117,7 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  iconLabel: { fontSize: 10, color: colors.cream },
+  iconLabel: { fontSize: 10, color: colors.ink },
   divider: { height: 1, backgroundColor: colors.borderSubtle, marginHorizontal: 24 },
   codeRow: {
     flexDirection: "row",
@@ -126,8 +126,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 14,
   },
-  codeText: { fontSize: 13, fontWeight: "700", color: colors.cream },
-  copyBtn: { fontSize: 12, fontWeight: "700", color: colors.yellow },
+  codeText: { fontSize: 13, fontWeight: "700", color: colors.ink },
+  copyBtn: { fontSize: 12, fontWeight: "700", color: colors.blue },
   closeBtn: { alignItems: "center", paddingVertical: 12 },
   closeText: { fontSize: 15, fontWeight: "600", color: colors.textSecondary },
 });

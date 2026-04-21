@@ -46,22 +46,22 @@ const s = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: colors.cream,
+    color: colors.ink,
     marginBottom: 8,
   },
   row: { flexDirection: "row", alignItems: "baseline", gap: 4, marginBottom: 8 },
-  current: { fontSize: 20, fontWeight: "600", color: colors.cream },
+  current: { fontSize: 20, fontWeight: "600", color: colors.ink },
   target: { fontSize: 12, color: colors.textSecondary },
   barBg: {
     height: 6,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: colors.sand2,
     borderRadius: 3,
     overflow: "hidden",
     marginBottom: 6,
   },
   barFill: {
     height: 6,
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.blue,
     borderRadius: 3,
   },
   context: {

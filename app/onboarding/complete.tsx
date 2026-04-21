@@ -206,9 +206,9 @@ const s = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: "rgba(245,200,66,0.1)",
+    backgroundColor: "rgba(59,130,246,0.1)",
     borderWidth: 1.5,
-    borderColor: "rgba(245,200,66,0.2)",
+    borderColor: "rgba(59,130,246,0.2)",
     justifyContent: "center",
     alignItems: "center",
     marginTop: 16,
@@ -222,7 +222,7 @@ const s = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    color: colors.cream,
+    color: colors.ink,
     fontWeight: "400",
     lineHeight: 36,
   },
@@ -256,7 +256,7 @@ const s = StyleSheet.create({
     borderRadius: 5,
   },
   statusDotActive: {
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.blue,
   },
   statusDotQueued: {
     backgroundColor: colors.textSecondary,
@@ -268,7 +268,7 @@ const s = StyleSheet.create({
   actionTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: colors.cream,
+    color: colors.ink,
     marginBottom: 2,
   },
   actionSubtitle: {

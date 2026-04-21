@@ -41,7 +41,7 @@ export default function PlaidCallbackScreen() {
 
   return (
     <View style={s.container}>
-      <ActivityIndicator size="large" color={colors.yellow} style={s.spinner} />
+      <ActivityIndicator size="large" color={colors.blue} style={s.spinner} />
       <Text style={s.text}>{status}</Text>
     </View>
   );
@@ -56,5 +56,5 @@ const s = StyleSheet.create({
     padding: 24,
   },
   spinner: { marginBottom: 16 },
-  text: { fontSize: 18, color: colors.cream, textAlign: "center" },
+  text: { fontSize: 18, color: colors.ink, textAlign: "center" },
 });

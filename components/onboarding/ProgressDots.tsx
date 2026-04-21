@@ -39,14 +39,14 @@ const s = StyleSheet.create({
   },
   dotActive: {
     width: 24,
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.blue,
     borderRadius: 4,
   },
   dotInactive: {
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: colors.sand3,
   },
   dotCompleted: {
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.blue,
     opacity: 0.5,
   },
 });

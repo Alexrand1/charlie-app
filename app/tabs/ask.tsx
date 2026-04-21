@@ -255,7 +255,7 @@ export default function AskCharlieScreen() {
       {/* ── Typing indicator ────────────────────────────── */}
       {sending && (
         <View style={s.typingRow}>
-          <ActivityIndicator size="small" color={colors.yellow} />
+          <ActivityIndicator size="small" color={colors.blue} />
           <Text style={s.typingText}>Charlie is thinking...</Text>
         </View>
       )}
@@ -389,7 +389,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 54,
     paddingBottom: 14,
-    backgroundColor: colors.navyMid,
+    backgroundColor: colors.cream,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
@@ -397,7 +397,7 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: colors.cream,
+    color: colors.ink,
   },
   headerSub: {
     fontSize: 10,
@@ -408,23 +408,23 @@ const s = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: colors.sand2,
     justifyContent: "center",
     alignItems: "center",
   },
-  closeBtnText: { fontSize: 11, fontWeight: "700", color: "#fff" },
+  closeBtnText: { fontSize: 11, fontWeight: "700", color: colors.ink },
 
   // ── Avatar ──────────────────────────────────────────────
   avatar: {
-    backgroundColor: "rgba(22,40,68,0.8)",
+    backgroundColor: colors.blue,
     borderWidth: 1,
-    borderColor: colors.borderMid,
+    borderColor: colors.blueLt,
     justifyContent: "center",
     alignItems: "center",
   },
   avatarText: {
     fontStyle: "italic",
-    color: colors.cream,
+    color: colors.textOnBlue,
     fontWeight: "400",
   },
 
@@ -457,10 +457,10 @@ const s = StyleSheet.create({
   suggestionChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.sand,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.borderMid,
+    borderColor: colors.sand2,
     paddingHorizontal: 12,
     paddingVertical: 9,
     marginBottom: 6,
@@ -472,7 +472,7 @@ const s = StyleSheet.create({
   },
   suggestionText: {
     fontSize: 12,
-    color: colors.cream,
+    color: colors.ink,
   },
 
   // ── Messages ────────────────────────────────────────────
@@ -493,12 +493,12 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   userBubble: {
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.blue,
     alignSelf: "flex-end",
     borderBottomRightRadius: 4,
   },
   aiBubble: {
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.sand,
     alignSelf: "flex-start",
     borderBottomLeftRadius: 4,
     marginLeft: 8,
@@ -513,8 +513,8 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   bubbleText: { fontSize: 15, lineHeight: 22 },
-  userText: { color: colors.textOnYellow },
-  aiText: { color: colors.cream },
+  userText: { color: colors.textOnBlue },
+  aiText: { color: colors.ink },
 
   // ── Typing ──────────────────────────────────────────────
   typingRow: {
@@ -531,7 +531,7 @@ const s = StyleSheet.create({
     alignItems: "flex-end",
     paddingHorizontal: 18,
     paddingVertical: 10,
-    backgroundColor: colors.navyMid,
+    backgroundColor: colors.cream,
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
   },
@@ -547,21 +547,21 @@ const s = StyleSheet.create({
   newBtnIcon: { fontSize: 20, color: colors.textSecondary, fontWeight: "bold" },
   input: {
     flex: 1,
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.sand,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.borderMid,
+    borderColor: colors.sand2,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 15,
     maxHeight: 100,
-    color: colors.cream,
+    color: colors.ink,
   },
   sendBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.navyLight,
+    backgroundColor: colors.blue,
     justifyContent: "center",
     alignItems: "center",
     marginLeft: spacing.sm,
@@ -571,10 +571,10 @@ const s = StyleSheet.create({
 
   // ── Inline Action Card ──────────────────────────────────
   actionCard: {
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.sand,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.borderMid,
+    borderColor: colors.sand2,
     padding: 12,
     marginBottom: 10,
   },
@@ -582,12 +582,12 @@ const s = StyleSheet.create({
     fontSize: 8,
     fontWeight: "700",
     letterSpacing: 0.6,
-    color: colors.yellow,
+    color: colors.blue,
     marginBottom: 6,
   },
   actionCardDesc: {
     fontSize: 12,
-    color: colors.cream,
+    color: colors.ink,
     lineHeight: 18,
     marginBottom: 10,
   },
@@ -599,18 +599,18 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  actionCardBtnPrimary: { backgroundColor: colors.navyLight },
+  actionCardBtnPrimary: { backgroundColor: colors.blue },
   actionCardBtnSecondary: { backgroundColor: colors.surface3 },
   actionCardBtnText: { fontSize: 10, fontWeight: "700" },
-  actionCardBtnTextPrimary: { color: "#fff" },
+  actionCardBtnTextPrimary: { color: colors.textOnBlue },
   actionCardBtnTextSecondary: { color: colors.textSecondary },
 
   // ── Savings Card ────────────────────────────────────────
   savingsCard: {
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.sand,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.borderMid,
+    borderColor: colors.sand2,
     padding: 12,
     marginBottom: 10,
   },
@@ -618,32 +618,32 @@ const s = StyleSheet.create({
     fontSize: 8,
     fontWeight: "700",
     letterSpacing: 0.6,
-    color: colors.yellow,
+    color: colors.blue,
     marginBottom: 8,
   },
   savingsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: colors.surface1,
+    backgroundColor: colors.sand2,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 7,
     marginBottom: 5,
   },
-  savingsRowLabel: { fontSize: 11, color: colors.cream },
+  savingsRowLabel: { fontSize: 11, color: colors.ink },
   savingsRowAmount: {
     fontSize: 11,
     fontWeight: "700",
-    color: colors.yellow,
+    color: colors.blue,
   },
 
   // ── All Fixed Card ──────────────────────────────────────
   fixedCard: {
-    backgroundColor: "rgba(168,197,160,0.08)",
+    backgroundColor: "rgba(61,170,110,0.08)",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(168,197,160,0.25)",
+    borderColor: "rgba(61,170,110,0.2)",
     padding: 12,
     marginBottom: 10,
   },
@@ -668,7 +668,7 @@ const s = StyleSheet.create({
   fixedRowLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: colors.cream,
+    color: colors.ink,
   },
   fixedRowDetail: {
     fontSize: 10,

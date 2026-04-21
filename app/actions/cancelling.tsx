@@ -31,7 +31,7 @@ export default function CancellingScreen() {
 
       {/* Spinner */}
       <View style={s.spinnerWrap}>
-        <ActivityIndicator size="large" color={colors.navyLight} />
+        <ActivityIndicator size="large" color={colors.blue} />
       </View>
 
       <Text style={s.title}>Charlie's on it</Text>
@@ -88,7 +88,7 @@ const s = StyleSheet.create({
   title: {
     fontSize: 26,
     fontStyle: "italic",
-    color: colors.cream,
+    color: colors.ink,
     marginBottom: 6,
   },
   subtitle: {
@@ -113,11 +113,11 @@ const s = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.navyLight,
+    backgroundColor: colors.blue,
   },
   stepText: { fontSize: 12 },
   stepDone: { color: colors.textSecondary },
-  stepActive: { fontWeight: "600", color: colors.cream },
+  stepActive: { fontWeight: "600", color: colors.ink },
   stepPending: { color: colors.textMuted },
   timeHint: { fontSize: 11, color: colors.textMuted },
 });

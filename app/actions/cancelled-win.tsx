@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { WinBackground } from "@/components/shared";
 import { colors } from "@/constants/theme";
 
-const BG = colors.navyLight;
+const BG = colors.blue;
 
 export default function CancelledWinScreen() {
   const router = useRouter();
@@ -91,7 +91,7 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  btnText: { fontSize: 15, fontWeight: "600", color: colors.navyLight },
+  btnText: { fontSize: 15, fontWeight: "600", color: colors.blue },
   actionsWaiting: {
     fontSize: 11,
     color: "rgba(255,255,255,0.55)",

@@ -67,14 +67,14 @@ const s = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.surface0 },
   content: { padding: 24, paddingTop: 54, paddingBottom: 24 },
   heroCard: {
-    backgroundColor: colors.navyLight,
+    backgroundColor: colors.blue,
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     gap: 8,
   },
-  heroTitle: { fontSize: 22, fontStyle: "italic", color: "#fff" },
-  heroSub: { fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 18 },
+  heroTitle: { fontSize: 22, fontStyle: "italic", color: colors.textOnBlue },
+  heroSub: { fontSize: 12, color: colors.textOnBlue, lineHeight: 18, opacity: 0.7 },
   codeLabel: {
     fontSize: 10,
     fontWeight: "600",
@@ -85,7 +85,7 @@ const s = StyleSheet.create({
   codeValue: {
     fontSize: 28,
     fontStyle: "italic",
-    color: colors.yellow,
+    color: colors.blue,
     letterSpacing: 2,
   },
   sectionLabel: {
@@ -100,10 +100,10 @@ const s = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: colors.navyLight,
+    backgroundColor: colors.blue,
     justifyContent: "center",
     alignItems: "center",
   },
-  stepNum: { fontSize: 12, fontWeight: "700", color: "#fff" },
-  stepText: { fontSize: 12, color: colors.cream },
+  stepNum: { fontSize: 12, fontWeight: "700", color: colors.textOnBlue },
+  stepText: { fontSize: 12, color: colors.ink },
 });
