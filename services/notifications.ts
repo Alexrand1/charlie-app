@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 import { api } from "./api";
 
 let Notifications: any = null;
@@ -7,8 +8,14 @@ let Notifications: any = null;
 try {
   Notifications = require("expo-notifications");
 } catch {
-  console.log("expo-notifications not installed — push notifications disabled");
+  console.log("expo-notifications not installed �� push notifications disabled");
 }
+
+// Expo project ID from app.json → extra.eas.projectId
+const EXPO_PROJECT_ID =
+  Constants.expoConfig?.extra?.eas?.projectId ||
+  (Constants as any).easConfig?.projectId ||
+  "f10b929b-f223-4b1b-9d2a-dc62b141a027";
 
 /**
  * Request push notification permissions and register the token with the backend.
@@ -40,7 +47,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     // Get Expo push token
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: "charlie", // Replace with your Expo project ID in production
+      projectId: EXPO_PROJECT_ID,
     });
     const pushToken = tokenData.data;
 

@@ -19,7 +19,7 @@ import {
   PlaidAccount,
   PlaidTransaction,
 } from "@/services/plaid";
-import { getInsights, dismissInsight, Insight } from "@/services/insights";
+import { getInsights, generateInsights, dismissInsight, Insight } from "@/services/insights";
 import { usePlaidLink } from "@/hooks/usePlaidLink";
 import { colors, spacing, radii } from "@/constants/theme";
 
@@ -53,8 +53,9 @@ export default function HomeScreen() {
         if (cached) setUser(cached);
       }
       // Fetch accounts + transactions
+      let accts: PlaidAccount[] = [];
       try {
-        const accts = await getAccounts();
+        accts = await getAccounts();
         setAccounts(accts);
         if (accts.length > 0) {
           const txns = await getTransactions({ limit: 20 }).catch(() => []);
@@ -63,9 +64,18 @@ export default function HomeScreen() {
       } catch {
         // No accounts yet
       }
-      // Fetch insights / actions
+      // Fetch insights / actions — auto-generate if none exist
       try {
-        const ins = await getInsights();
+        let ins = await getInsights();
+        // If no insights exist and user has linked accounts, generate on-demand
+        if (ins.length === 0 && accts.length > 0) {
+          try {
+            const result = await generateInsights();
+            ins = result.insights;
+          } catch {
+            // Claude call may fail — that's okay, show empty state
+          }
+        }
         setInsights(ins);
       } catch {
         // No insights yet
@@ -97,6 +107,15 @@ export default function HomeScreen() {
     setSyncing(true);
     try {
       const result = await syncAllItems();
+      // After syncing fresh transactions, regenerate insights
+      try {
+        const insightResult = await generateInsights();
+        if (insightResult.insights.length > 0) {
+          setInsights(insightResult.insights);
+        }
+      } catch {
+        // Insight generation is best-effort after sync
+      }
       const msg = result.errors.length > 0
         ? `${result.totalSynced} new transaction(s). ${result.errors.length} item(s) failed.`
         : `${result.totalSynced} new transaction(s).`;

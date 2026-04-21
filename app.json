@@ -28,7 +28,14 @@
       "expo-router",
       "expo-asset",
       "expo-font",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0D1460"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
