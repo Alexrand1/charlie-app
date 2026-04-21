@@ -117,7 +117,18 @@ export default function HomeScreen() {
     };
     const route = routes[insight.actionType];
     if (route) {
-      router.push(route as any);
+      // Pass insight data as route params so action screens use real data
+      router.push({
+        pathname: route as any,
+        params: {
+          insightId: insight.insightId,
+          createdAt: insight.createdAt,
+          insightText: insight.insight,
+          actionLabel: insight.actionLabel || "",
+          actionDetail: insight.actionDetail || "",
+          actionValue: JSON.stringify(insight.actionValue || {}),
+        },
+      });
     }
   };
 

@@ -1,5 +1,5 @@
-import { View, Text, ScrollView, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
+import { View, Text, ScrollView, StyleSheet, Linking, Alert } from "react-native";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   BackPill,
   Eyebrow,
@@ -8,10 +8,68 @@ import {
   CTAButton,
   CharlieCard,
 } from "@/components/shared";
+import { approveInsight } from "@/services/insights";
 import { colors } from "@/constants/theme";
+
+// Common cancellation URLs for popular subscriptions
+const CANCELLATION_URLS: Record<string, string> = {
+  "netflix": "https://www.netflix.com/cancelplan",
+  "hulu": "https://secure.hulu.com/account",
+  "paramount+": "https://www.paramountplus.com/account/",
+  "disney+": "https://www.disneyplus.com/account",
+  "hbo max": "https://www.max.com/account",
+  "max": "https://www.max.com/account",
+  "spotify": "https://www.spotify.com/account/subscription/",
+  "apple music": "https://support.apple.com/en-us/HT202039",
+  "youtube premium": "https://www.youtube.com/paid_memberships",
+  "amazon prime": "https://www.amazon.com/mc/pipelines/cancelPrime",
+  "peacock": "https://www.peacocktv.com/account/",
+  "draftkings": "https://myaccount.draftkings.com/subscriptions",
+  "fanduel": "https://account.fanduel.com/subscriptions",
+};
 
 export default function CancelSubscriptionScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+
+  // Parse insight data from route params, with fallbacks
+  const actionValue = params.actionValue
+    ? JSON.parse(params.actionValue as string)
+    : {};
+
+  const merchant = actionValue.merchant || "Paramount+";
+  const monthlyCost = actionValue.monthly_cost || 14.99;
+  const annualSavings = actionValue.annual_savings || monthlyCost * 12;
+  const insightText = (params.insightText as string) || `You haven't used ${merchant} recently. Charlie will handle it.`;
+
+  const handleCancel = async () => {
+    // Mark insight as acted on
+    if (params.insightId && params.createdAt) {
+      try {
+        await approveInsight(
+          params.insightId as string,
+          params.createdAt as string
+        );
+      } catch {
+        // Non-blocking — proceed even if approve fails
+      }
+    }
+
+    // Try to open the cancellation URL
+    const key = merchant.toLowerCase();
+    const url = CANCELLATION_URLS[key];
+    if (url) {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+        router.push("/actions/cancelled-win" as any);
+        return;
+      }
+    }
+
+    // Fallback: go to cancelling animation, then success
+    router.push("/actions/cancelling" as any);
+  };
 
   return (
     <ScrollView style={s.scroll} contentContainerStyle={s.content}>
@@ -22,11 +80,11 @@ export default function CancelSubscriptionScreen() {
       <View style={{ height: 4 }} />
       <CharlieHeadline
         plainPrefix="Cancel "
-        italicEmphasis="Paramount+"
+        italicEmphasis={merchant}
         plainSuffix="?"
       />
       <View style={{ height: 6 }} />
-      <CharlieSub text="You haven't watched in 7 months. Charlie will handle it." />
+      <CharlieSub text={insightText} />
       <View style={{ height: 14 }} />
 
       {/* Subscription card */}
@@ -36,40 +94,42 @@ export default function CancelSubscriptionScreen() {
             <Text style={{ fontSize: 18, color: colors.textOnBlue }}>▶</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.subName}>Paramount+</Text>
-            <Text style={s.subMeta}>Next bill: Apr 24</Text>
+            <Text style={s.subName}>{merchant}</Text>
+            <Text style={s.subMeta}>Recurring charge</Text>
           </View>
-          <Text style={s.subPrice}>$14.99/mo</Text>
+          <Text style={s.subPrice}>${monthlyCost.toFixed(2)}/mo</Text>
         </View>
         <View style={s.divider} />
         <View style={s.statsRow}>
           <View>
-            <Text style={s.subMeta}>Paid while unused</Text>
-            <Text style={s.negativeAmount}>−$104.93</Text>
+            <Text style={s.subMeta}>Monthly cost</Text>
+            <Text style={s.negativeAmount}>-${monthlyCost.toFixed(2)}</Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <Text style={s.subMeta}>Saves / year</Text>
-            <Text style={s.positiveAmount}>+$179.88</Text>
+            <Text style={s.positiveAmount}>+${annualSavings.toFixed(2)}</Text>
           </View>
         </View>
       </CharlieCard>
       <View style={{ height: 10 }} />
 
-      {/* Alert box */}
+      {/* Info box */}
       <View style={s.alertBox}>
-        <Text style={{ fontSize: 16 }}>⚠️</Text>
+        <Text style={{ fontSize: 16 }}>💡</Text>
         <View style={{ flex: 1 }}>
-          <Text style={s.alertTitle}>Last used Aug 14, 2024</Text>
-          <Text style={s.alertSub}>7 months ago</Text>
+          <Text style={s.alertTitle}>Charlie spotted this leak</Text>
+          <Text style={s.alertSub}>
+            We'll open {merchant}'s cancellation page so you can cancel directly.
+          </Text>
         </View>
       </View>
 
       <View style={{ flex: 1, minHeight: 40 }} />
 
       <CTAButton
-        title="Cancel Paramount+"
+        title={`Cancel ${merchant}`}
         variant="blue"
-        onPress={() => router.push("/actions/cancelling")}
+        onPress={handleCancel}
       />
       <View style={{ height: 8 }} />
       <CTAButton title="Keep it for now" variant="sand" onPress={() => router.back()} />

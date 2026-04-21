@@ -6,7 +6,23 @@ export interface Insight {
   insight: string;
   actionLabel?: string;
   actionDetail?: string;
+  actionValue?: {
+    // MOVE_MONEY
+    amount?: number;
+    from_account?: string;
+    to_account?: string;
+    // STOP_LEAK
+    merchant?: string;
+    monthly_cost?: number;
+    annual_savings?: number;
+    // PATTERN
+    category?: string;
+    current_mtd?: number;
+    avg_3mo?: number;
+    suggested_limit?: number;
+  };
   confidence: "HIGH" | "MEDIUM" | "LOW";
+  actedOn?: boolean;
   createdAt: string;
 }
 
@@ -27,6 +43,17 @@ export async function generateInsights(): Promise<{
 }> {
   const response = await api.post("/insights/generate");
   return response.data;
+}
+
+/**
+ * Approve (act on) an insight. Returns the insight with action_value.
+ */
+export async function approveInsight(
+  insightId: string,
+  createdAt: string
+): Promise<Insight> {
+  const response = await api.post(`/insights/${insightId}/approve`, { createdAt });
+  return response.data.insight;
 }
 
 /**
