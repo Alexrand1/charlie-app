@@ -8,8 +8,9 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  Dimensions,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useNavigation } from "expo-router";
 import { api } from "@/services/api";
 import { auth, AuthUser } from "@/services/auth";
 import {
@@ -30,6 +31,9 @@ const ACTION_TAG: Record<string, string> = {
   PATTERN: "Fix a Habit",
   NONE: "Insight",
 };
+
+const { width: SCREEN_W } = Dimensions.get("window");
+const ACCT_CARD_WIDTH = Math.floor((SCREEN_W - 48 - 20) / 3.3); // 3 visible + peek of 4th
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -91,6 +95,18 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Re-fetch insights when screen regains focus (e.g. returning from action screen)
+  const navigation = useNavigation();
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      // Lightweight refresh — just re-fetch insights to drop acted-on / dismissed cards
+      getInsights()
+        .then((ins) => setInsights(ins))
+        .catch(() => {});
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -217,36 +233,40 @@ export default function HomeScreen() {
           </>
         )}
 
-        {/* ─── Account Chips ───────────────────────────── */}
+        {/* ─── Account Cards ───────────────────────────── */}
         {hasAccounts && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={s.chipScroll}
-            contentContainerStyle={s.chipRow}
+            style={s.acctCardScroll}
+            contentContainerStyle={s.acctCardRow}
+            snapToInterval={ACCT_CARD_WIDTH + 10}
+            decelerationRate="fast"
           >
-            {accounts.map((acct) => (
-              <View key={acct.accountId} style={s.accountChip}>
-                <Text style={s.chipLabel} numberOfLines={1}>
-                  {acct.name.length > 12
-                    ? acct.name.slice(0, 10) + "."
-                    : acct.name}
+            {accounts.slice(0, 6).map((acct) => (
+              <View key={acct.accountId} style={s.acctCard}>
+                <Text style={s.acctCardName} numberOfLines={1}>
+                  {acct.name}
                 </Text>
-                <Text style={s.chipValue}>
+                <Text style={s.acctCardBalance}>
                   {DEBT_TYPES.includes(acct.type) ? "-" : ""}$
                   {(acct.currentBalance ?? 0).toLocaleString("en-US", {
                     maximumFractionDigits: 0,
                   })}
                 </Text>
+                <Text style={s.acctCardDelta}>+ this month</Text>
               </View>
             ))}
-            <TouchableOpacity
-              style={s.addChip}
-              onPress={handleConnectBank}
-              activeOpacity={0.7}
-            >
-              <Text style={s.addChipText}>+ Add</Text>
-            </TouchableOpacity>
+            {accounts.length < 3 && (
+              <TouchableOpacity
+                style={s.acctCardLink}
+                onPress={handleConnectBank}
+                activeOpacity={0.7}
+              >
+                <Text style={s.acctCardLinkIcon}>+</Text>
+                <Text style={s.acctCardLinkText}>Link Account</Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
         )}
 
@@ -479,39 +499,57 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
 
-  // ── Account Chips ───────────────────────────────────────
-  chipScroll: { marginBottom: 14 },
-  chipRow: { gap: 6 },
-  accountChip: {
-    backgroundColor: colors.surface2,
-    borderRadius: 10,
+  // ── Account Cards ────────────────────────────────────────
+  acctCardScroll: { marginBottom: 14 },
+  acctCardRow: { gap: 10, paddingRight: 24 },
+  acctCard: {
+    width: ACCT_CARD_WIDTH,
+    backgroundColor: colors.surface1,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.borderMid,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    alignItems: "center",
+    borderColor: colors.borderSubtle,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    justifyContent: "space-between",
+    minHeight: 100,
   },
-  chipLabel: {
-    fontSize: 9,
+  acctCardName: {
+    fontSize: 11,
+    fontWeight: "500",
     color: colors.muted,
-    marginBottom: 2,
+    marginBottom: 6,
   },
-  chipValue: {
-    fontSize: 12,
-    fontWeight: "600",
+  acctCardBalance: {
+    fontSize: 20,
+    fontWeight: "700",
     color: colors.ink,
+    marginBottom: 4,
   },
-  addChip: {
+  acctCardDelta: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: colors.positive,
+  },
+  acctCardLink: {
+    width: ACCT_CARD_WIDTH,
     backgroundColor: "transparent",
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 14,
+    borderWidth: 1.5,
     borderColor: colors.borderMid,
     borderStyle: "dashed",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     justifyContent: "center",
+    alignItems: "center",
+    minHeight: 100,
   },
-  addChipText: {
+  acctCardLinkIcon: {
+    fontSize: 22,
+    fontWeight: "300",
+    color: colors.blue,
+    marginBottom: 4,
+  },
+  acctCardLinkText: {
     fontSize: 11,
     fontWeight: "600",
     color: colors.blue,
