@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -32,6 +32,13 @@ const ACTION_TAG: Record<string, string> = {
   NONE: "Insight",
 };
 
+const ACTION_ICON: Record<string, string> = {
+  MOVE_MONEY: "💰",
+  STOP_LEAK: "💧",
+  PATTERN: "📊",
+  NONE: "💡",
+};
+
 const { width: SCREEN_W } = Dimensions.get("window");
 const ACCT_CARD_WIDTH = Math.floor((SCREEN_W - 48 - 20) / 3.3); // 3 visible + peek of 4th
 
@@ -45,6 +52,9 @@ export default function HomeScreen() {
 
   const [syncing, setSyncing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedInsightIdx, setExpandedInsightIdx] = useState(0); // first insight is expanded by default
+  const generatingRef = useRef(false); // prevent concurrent generate calls
+  const hasGeneratedRef = useRef(false); // only auto-generate once per session
 
   const fetchData = useCallback(async () => {
     try {
@@ -68,18 +78,26 @@ export default function HomeScreen() {
       } catch {
         // No accounts yet
       }
-      // Fetch insights / actions — auto-generate if none exist
+      // Fetch insights / actions — auto-generate once if none exist
       try {
         let ins = await getInsights();
-        // If no insights exist and user has linked accounts, generate on-demand
-        if (ins.length === 0 && accts.length > 0) {
+        if (
+          ins.length === 0 &&
+          accts.length > 0 &&
+          !hasGeneratedRef.current &&
+          !generatingRef.current
+        ) {
           try {
+            generatingRef.current = true;
+            hasGeneratedRef.current = true;
             console.log("[Charlie] No insights found, generating via Claude...");
             const result = await generateInsights();
             console.log("[Charlie] Generated", result.generated, "insight(s)");
             ins = result.insights;
           } catch (genErr: any) {
             console.error("[Charlie] Insight generation failed:", genErr.response?.status, genErr.response?.data || genErr.message);
+          } finally {
+            generatingRef.current = false;
           }
         }
         setInsights(ins);
@@ -210,10 +228,22 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* ─── Greeting ────────────────────────────────── */}
-        <Text style={s.greeting}>
-          Hey {user?.firstName || "there"} 👋
-        </Text>
+        {/* ─── Greeting + Profile ─────────────────────── */}
+        <View style={s.greetingRow}>
+          <Text style={s.greeting}>
+            Hey {user?.firstName || "there"} 👋
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.push("/tabs/settings")}
+            activeOpacity={0.7}
+          >
+            <View style={s.profileAvatar}>
+              <Text style={s.profileInitial}>
+                {(user?.firstName || "U").charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         {/* ─── Total Balance ───────────────────────────── */}
         <Text style={s.balanceLabel}>TOTAL BALANCE</Text>
@@ -257,22 +287,20 @@ export default function HomeScreen() {
                 <Text style={s.acctCardDelta}>+ this month</Text>
               </View>
             ))}
-            {accounts.length < 3 && (
-              <TouchableOpacity
-                style={s.acctCardLink}
-                onPress={handleConnectBank}
-                activeOpacity={0.7}
-              >
-                <Text style={s.acctCardLinkIcon}>+</Text>
-                <Text style={s.acctCardLinkText}>Link Account</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={s.acctCardLink}
+              onPress={handleConnectBank}
+              activeOpacity={0.7}
+            >
+              <Text style={s.acctCardLinkIcon}>+</Text>
+              <Text style={s.acctCardLinkText}>Link Account</Text>
+            </TouchableOpacity>
           </ScrollView>
         )}
 
         {/* ─── Actions For You ─────────────────────────── */}
         <View style={s.actionsHeader}>
-          <Text style={s.sectionLabel}>ACTIONS FOR YOU</Text>
+          <Text style={s.sectionLabel}>Actions for you</Text>
           {insights.length > 0 ? (
             <View style={s.countBadge}>
               <Text style={s.countBadgeText}>{insights.length}</Text>
@@ -286,41 +314,80 @@ export default function HomeScreen() {
 
         {insights.length > 0 ? (
           <View style={s.actionCards}>
-            {insights.map((insight) => (
-              <View key={insight.insightId} style={s.actionCard}>
-                <Text style={s.actionTag}>
-                  {ACTION_TAG[insight.actionType] || "Insight"}
-                </Text>
-                <Text style={s.actionBody}>{insight.insight}</Text>
-                <View style={s.actionBtns}>
-                  <TouchableOpacity
-                    style={s.actionPrimaryBtn}
-                    onPress={() => handleActionPress(insight)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={s.actionPrimaryText}>
-                      {insight.actionLabel || "Review"}
+            {insights.map((insight, idx) => {
+              const isExpanded = idx === expandedInsightIdx;
+              // Split insight text: first sentence = headline, rest = sub copy
+              const dotIdx = insight.insight.indexOf(". ");
+              const headline =
+                dotIdx > 0
+                  ? insight.insight.slice(0, dotIdx + 1)
+                  : insight.insight;
+              const subCopy =
+                dotIdx > 0 ? insight.insight.slice(dotIdx + 2) : "";
+              // Brief description for compact row
+              const brief = insight.actionDetail || headline;
+
+              if (isExpanded) {
+                // ── Featured blue card ──
+                return (
+                  <View key={insight.insightId} style={s.featuredCard}>
+                    <Text style={s.featuredTag}>
+                      {ACTION_TAG[insight.actionType] || "Insight"}
                     </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={s.actionSecondaryBtn}
-                    onPress={() => handleDismissInsight(insight)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={s.actionSecondaryText}>
-                      {insight.actionType === "STOP_LEAK"
-                        ? "Keep it"
-                        : insight.actionType === "PATTERN"
-                        ? "Dismiss"
-                        : "Not now"}
+                    <Text style={s.featuredHeadline}>{headline}</Text>
+                    {subCopy.length > 0 && (
+                      <Text style={s.featuredSub}>{subCopy}</Text>
+                    )}
+                    <View style={s.featuredBtns}>
+                      <TouchableOpacity
+                        style={s.featuredPrimaryBtn}
+                        onPress={() => handleActionPress(insight)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={s.featuredPrimaryText}>
+                          {insight.actionLabel || "Review"}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={s.featuredSecondaryBtn}
+                        onPress={() => handleDismissInsight(insight)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={s.featuredSecondaryText}>Not now</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              }
+
+              // ── Compact row ──
+              return (
+                <TouchableOpacity
+                  key={insight.insightId}
+                  style={s.compactCard}
+                  onPress={() => setExpandedInsightIdx(idx)}
+                  activeOpacity={0.7}
+                >
+                  <View style={s.compactIcon}>
+                    <Text style={s.compactIconText}>
+                      {ACTION_ICON[insight.actionType] || "💡"}
                     </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
+                  </View>
+                  <View style={s.compactContent}>
+                    <Text style={s.compactTag}>
+                      {ACTION_TAG[insight.actionType] || "Insight"}
+                    </Text>
+                    <Text style={s.compactBrief} numberOfLines={1}>
+                      {brief}
+                    </Text>
+                  </View>
+                  <Text style={s.compactChevron}>›</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ) : (
-          // All caught up state (App11)
+          // All caught up state
           <View style={s.allClear}>
             <Text style={s.allClearEmoji}>🏖</Text>
             <Text style={s.allClearTitle}>You're all caught up</Text>
@@ -425,22 +492,9 @@ export default function HomeScreen() {
           </>
         )}
 
-        {/* Bottom spacer for FAB */}
-        <View style={{ height: 80 }} />
+        {/* Bottom spacer for tab bar */}
+        <View style={{ height: 100 }} />
       </ScrollView>
-
-      {/* ─── Chat FAB ──────────────────────────────────── */}
-      <TouchableOpacity
-        style={s.chatFab}
-        onPress={() => router.push("/tabs/ask")}
-        activeOpacity={0.8}
-      >
-        <View style={s.chatFabRing}>
-          <View style={s.chatFabInner}>
-            <Text style={s.chatFabIcon}>💬</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -458,11 +512,29 @@ const s = StyleSheet.create({
   content: { padding: 24, paddingTop: 54, paddingBottom: 40 },
 
   // ── Greeting ────────────────────────────────────────────
+  greetingRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
   greeting: {
     fontSize: 15,
     fontWeight: "600",
     color: colors.ink,
-    marginBottom: 14,
+  },
+  profileAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface2,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  profileInitial: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.muted,
   },
 
   // ── Balance ─────────────────────────────────────────────
@@ -563,88 +635,138 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   sectionLabel: {
-    fontSize: 9,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "600",
     color: colors.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   countBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: colors.blue,
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 6,
+    marginLeft: 8,
   },
   countBadgeText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "700",
     color: "#fff",
   },
   checkBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: colors.positive,
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 6,
+    marginLeft: 8,
   },
   checkBadgeText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "700",
     color: "#fff",
   },
 
   // ── Action Cards ────────────────────────────────────────
   actionCards: { gap: 8, marginBottom: 14 },
-  actionCard: {
+
+  // Featured (expanded) card — dark navy blue
+  featuredCard: {
+    backgroundColor: colors.blue,
+    borderRadius: 16,
+    padding: 20,
+  },
+  featuredTag: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.6)",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 10,
+  },
+  featuredHeadline: {
+    fontSize: 22,
+    fontWeight: "400",
+    fontStyle: "italic",
+    color: "#fff",
+    lineHeight: 28,
+    marginBottom: 8,
+  },
+  featuredSub: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.8)",
+    lineHeight: 19,
+    marginBottom: 16,
+  },
+  featuredBtns: { flexDirection: "row", gap: 8 },
+  featuredPrimaryBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+  },
+  featuredPrimaryText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.blue,
+  },
+  featuredSecondaryBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 10,
+  },
+  featuredSecondaryText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.8)",
+  },
+
+  // Compact (collapsed) row
+  compactCard: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface1,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  actionTag: {
+  compactIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: colors.surface2,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  compactIconText: {
+    fontSize: 14,
+  },
+  compactContent: {
+    flex: 1,
+  },
+  compactTag: {
     fontSize: 9,
     fontWeight: "700",
     color: colors.blue,
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    marginBottom: 6,
+    marginBottom: 2,
   },
-  actionBody: {
+  compactBrief: {
     fontSize: 13,
     color: colors.ink,
-    lineHeight: 19,
-    marginBottom: 12,
   },
-  actionBtns: { flexDirection: "row", gap: 8 },
-  actionPrimaryBtn: {
-    flex: 1,
-    backgroundColor: colors.blue,
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  actionPrimaryText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.textOnBlue,
-  },
-  actionSecondaryBtn: {
-    flex: 1,
-    backgroundColor: colors.surface2,
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  actionSecondaryText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.textSecondary,
+  compactChevron: {
+    fontSize: 20,
+    fontWeight: "300",
+    color: colors.blue,
+    marginLeft: 8,
   },
 
   // ── All Caught Up ───────────────────────────────────────
@@ -760,28 +882,4 @@ const s = StyleSheet.create({
     color: colors.blue,
   },
 
-  // ── Chat FAB ────────────────────────────────────────────
-  chatFab: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-  },
-  chatFabRing: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-    borderColor: "rgba(13,20,96,0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  chatFabInner: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.blue,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  chatFabIcon: { fontSize: 20 },
 });
