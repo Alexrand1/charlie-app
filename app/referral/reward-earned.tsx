@@ -32,7 +32,7 @@ export default function RewardEarnedScreen() {
 
         <TouchableOpacity
           style={s.btn}
-          onPress={() => router.replace("/referral")}
+          onPress={() => router.replace("/tabs/refer" as any)}
           activeOpacity={0.8}
         >
           <Text style={s.btnText}>Invite more friends</Text>

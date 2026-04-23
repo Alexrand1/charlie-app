@@ -52,7 +52,8 @@ export default function HomeScreen() {
 
   const [syncing, setSyncing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [expandedInsightIdx, setExpandedInsightIdx] = useState(0); // first insight is expanded by default
+  // Track expanded insight by ID (not index) so swaps are stable across refetches
+  const [expandedInsightId, setExpandedInsightId] = useState<string | null>(null);
   const generatingRef = useRef(false); // prevent concurrent generate calls
   const hasGeneratedRef = useRef(false); // only auto-generate once per session
 
@@ -354,79 +355,92 @@ export default function HomeScreen() {
         </View>
 
         {insights.length > 0 ? (
-          <View style={s.actionCards}>
-            {insights.map((insight, idx) => {
-              const isExpanded = idx === expandedInsightIdx;
-              // Split insight text: first sentence = headline, rest = sub copy
-              const dotIdx = insight.insight.indexOf(". ");
-              const headline =
-                dotIdx > 0
-                  ? insight.insight.slice(0, dotIdx + 1)
-                  : insight.insight;
-              const subCopy =
-                dotIdx > 0 ? insight.insight.slice(dotIdx + 2) : "";
-              // Brief description for compact row
-              const brief = insight.actionDetail || headline;
+          (() => {
+            // Resolve which insight is currently expanded. Default to the first
+            // when nothing is explicitly expanded, or when the previously
+            // expanded insight was dismissed/regenerated.
+            const expandedInsight =
+              insights.find((i) => i.insightId === expandedInsightId) ||
+              insights[0];
+            const collapsedInsights = insights.filter(
+              (i) => i.insightId !== expandedInsight.insightId
+            );
 
-              if (isExpanded) {
-                // ── Featured blue card ──
-                return (
-                  <View key={insight.insightId} style={s.featuredCard}>
-                    <Text style={s.featuredTag}>
-                      {ACTION_TAG[insight.actionType] || "Insight"}
-                    </Text>
-                    <Text style={s.featuredHeadline}>{headline}</Text>
-                    {subCopy.length > 0 && (
-                      <Text style={s.featuredSub}>{subCopy}</Text>
-                    )}
-                    <View style={s.featuredBtns}>
-                      <TouchableOpacity
-                        style={s.featuredPrimaryBtn}
-                        onPress={() => handleActionPress(insight)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={s.featuredPrimaryText}>
-                          {insight.actionLabel || "Review"}
+            // Split insight text: first sentence = headline, rest = sub copy
+            const dotIdx = expandedInsight.insight.indexOf(". ");
+            const headline =
+              dotIdx > 0
+                ? expandedInsight.insight.slice(0, dotIdx + 1)
+                : expandedInsight.insight;
+            const subCopy =
+              dotIdx > 0 ? expandedInsight.insight.slice(dotIdx + 2) : "";
+
+            return (
+              <View style={s.actionCards}>
+                {/* ── Featured blue card (always at top) ── */}
+                <View style={s.featuredCard}>
+                  <Text style={s.featuredTag}>
+                    {ACTION_TAG[expandedInsight.actionType] || "Insight"}
+                  </Text>
+                  <Text style={s.featuredHeadline}>{headline}</Text>
+                  {subCopy.length > 0 && (
+                    <Text style={s.featuredSub}>{subCopy}</Text>
+                  )}
+                  <View style={s.featuredBtns}>
+                    <TouchableOpacity
+                      style={s.featuredPrimaryBtn}
+                      onPress={() => handleActionPress(expandedInsight)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={s.featuredPrimaryText}>
+                        {expandedInsight.actionLabel || "Review"}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={s.featuredSecondaryBtn}
+                      onPress={() => handleDismissInsight(expandedInsight)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={s.featuredSecondaryText}>Not now</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* ── Compact rows below ── */}
+                {collapsedInsights.map((insight) => {
+                  const cDot = insight.insight.indexOf(". ");
+                  const cHead =
+                    cDot > 0
+                      ? insight.insight.slice(0, cDot + 1)
+                      : insight.insight;
+                  const brief = insight.actionDetail || cHead;
+                  return (
+                    <TouchableOpacity
+                      key={insight.insightId}
+                      style={s.compactCard}
+                      onPress={() => setExpandedInsightId(insight.insightId)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={s.compactIcon}>
+                        <Text style={s.compactIconText}>
+                          {ACTION_ICON[insight.actionType] || "💡"}
                         </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={s.featuredSecondaryBtn}
-                        onPress={() => handleDismissInsight(insight)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={s.featuredSecondaryText}>Not now</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              }
-
-              // ── Compact row ──
-              return (
-                <TouchableOpacity
-                  key={insight.insightId}
-                  style={s.compactCard}
-                  onPress={() => setExpandedInsightIdx(idx)}
-                  activeOpacity={0.7}
-                >
-                  <View style={s.compactIcon}>
-                    <Text style={s.compactIconText}>
-                      {ACTION_ICON[insight.actionType] || "💡"}
-                    </Text>
-                  </View>
-                  <View style={s.compactContent}>
-                    <Text style={s.compactTag}>
-                      {ACTION_TAG[insight.actionType] || "Insight"}
-                    </Text>
-                    <Text style={s.compactBrief} numberOfLines={1}>
-                      {brief}
-                    </Text>
-                  </View>
-                  <Text style={s.compactChevron}>›</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                      </View>
+                      <View style={s.compactContent}>
+                        <Text style={s.compactTag}>
+                          {ACTION_TAG[insight.actionType] || "Insight"}
+                        </Text>
+                        <Text style={s.compactBrief} numberOfLines={1}>
+                          {brief}
+                        </Text>
+                      </View>
+                      <Text style={s.compactChevron}>›</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            );
+          })()
         ) : (
           // All caught up state
           <View style={s.allClear}>
@@ -489,7 +503,7 @@ export default function HomeScreen() {
         )}
 
         {/* ─── Referral Strip ──────────────────────────── */}
-        <TouchableOpacity style={s.referralStrip} activeOpacity={0.7} onPress={() => router.push("/referral" as any)}>
+        <TouchableOpacity style={s.referralStrip} activeOpacity={0.7} onPress={() => router.push("/tabs/refer" as any)}>
           <Text style={s.referralText}>🎁  Give $10, get $10</Text>
           <Text style={s.referralCta}>Invite →</Text>
         </TouchableOpacity>
