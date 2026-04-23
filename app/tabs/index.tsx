@@ -215,6 +215,19 @@ export default function HomeScreen() {
       }, 0)
     : null;
 
+  // ── Compute monthly deltas per account from transactions ──
+  // Plaid: positive amount = money out, negative = money in
+  const now = new Date();
+  const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthlyTxns = transactions.filter((t) => t.date.startsWith(monthPrefix));
+
+  const acctDeltas: Record<string, number> = {};
+  for (const t of monthlyTxns) {
+    // Negative amount in Plaid = deposit/income → positive delta for the user
+    acctDeltas[t.accountId] = (acctDeltas[t.accountId] || 0) - t.amount;
+  }
+  const totalDelta = Object.values(acctDeltas).reduce((s, v) => s + v, 0);
+
   return (
     <View style={s.root}>
       <ScrollView
@@ -252,7 +265,18 @@ export default function HomeScreen() {
             <Text style={s.balanceValue}>
               ${totalBalance.toLocaleString("en-US", { maximumFractionDigits: 0 })}
             </Text>
-            <Text style={s.balanceTrend}>↑ this month</Text>
+            <Text
+              style={[
+                s.balanceTrend,
+                totalDelta < 0 && { color: colors.negative },
+              ]}
+            >
+              {totalDelta >= 0 ? "↑" : "↓"} $
+              {Math.abs(totalDelta).toLocaleString("en-US", {
+                maximumFractionDigits: 0,
+              })}{" "}
+              this month
+            </Text>
           </>
         ) : (
           <>
@@ -284,7 +308,24 @@ export default function HomeScreen() {
                     maximumFractionDigits: 0,
                   })}
                 </Text>
-                <Text style={s.acctCardDelta}>+ this month</Text>
+                {(() => {
+                  const delta = acctDeltas[acct.accountId] || 0;
+                  if (delta === 0) return null;
+                  return (
+                    <Text
+                      style={[
+                        s.acctCardDelta,
+                        delta < 0 && { color: colors.negative },
+                      ]}
+                    >
+                      {delta >= 0 ? "+ " : "- "}$
+                      {Math.abs(delta).toLocaleString("en-US", {
+                        maximumFractionDigits: 0,
+                      })}{" "}
+                      this month
+                    </Text>
+                  );
+                })()}
               </View>
             ))}
             <TouchableOpacity
