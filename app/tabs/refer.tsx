@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { CTAButton, CharlieCard } from "@/components/shared";
 import { colors } from "@/constants/theme";
 import { copyToClipboard } from "@/utils/clipboard";
+import { FLOATING_TAB_BAR_CLEARANCE } from "./_layout";
 
 const STEPS = [
   "Share your code or link",
@@ -91,7 +92,7 @@ export default function ReferTab() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface0 },
   scroll: { flex: 1 },
-  content: { padding: 24, paddingTop: 54, paddingBottom: 24 },
+  content: { padding: 24, paddingTop: 54, paddingBottom: FLOATING_TAB_BAR_CLEARANCE + 8 },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",

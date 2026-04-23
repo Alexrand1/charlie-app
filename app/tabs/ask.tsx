@@ -14,6 +14,7 @@ import { useRouter } from "expo-router";
 import { sendMessage, ChatMessage } from "@/services/chat";
 import { MarkdownText } from "@/components/chat/MarkdownText";
 import { colors, spacing, radii, fonts } from "@/constants/theme";
+import { FLOATING_TAB_BAR_CLEARANCE } from "./_layout";
 
 // ─── Suggestions (matching PM spec App28) ────────────────────
 const SUGGESTIONS = [
@@ -539,6 +540,9 @@ const s = StyleSheet.create({
   typingText: { fontSize: 12, color: colors.textSecondary, marginLeft: 8 },
 
   // ── Input bar ───────────────────────────────────────────
+  // marginBottom reserves vertical space for the floating pill tab bar
+  // below (see tabs/_layout.tsx → FLOATING_TAB_BAR_CLEARANCE). Without
+  // this the input sits underneath the tab bar.
   inputBar: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -547,6 +551,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.cream,
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
+    marginBottom: FLOATING_TAB_BAR_CLEARANCE,
   },
   newBtn: {
     width: 36,

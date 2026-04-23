@@ -23,6 +23,7 @@ import {
 import { getInsights, generateInsights, dismissInsight, Insight } from "@/services/insights";
 import { usePlaidLink } from "@/hooks/usePlaidLink";
 import { colors, spacing, radii } from "@/constants/theme";
+import { FLOATING_TAB_BAR_CLEARANCE } from "./_layout";
 
 // ─── Tag display mapping for insight action types ────────────
 const ACTION_TAG: Record<string, string> = {
@@ -564,7 +565,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface0,
   },
   scroll: { flex: 1 },
-  content: { padding: 24, paddingTop: 54, paddingBottom: 40 },
+  content: { padding: 24, paddingTop: 54, paddingBottom: FLOATING_TAB_BAR_CLEARANCE + 8 },
 
   // ── Greeting ────────────────────────────────────────────
   greetingRow: {

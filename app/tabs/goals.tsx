@@ -23,6 +23,7 @@ import {
   Goal,
 } from "@/services/goals";
 import { colors, spacing, radii } from "@/constants/theme";
+import { FLOATING_TAB_BAR_CLEARANCE } from "./_layout";
 
 const GOAL_TYPES = [
   { key: "save", label: "Save", icon: "💰", color: colors.sage },
@@ -343,7 +344,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surface0,
   },
-  content: { padding: spacing.xl, paddingBottom: 80 },
+  content: { padding: spacing.xl, paddingBottom: FLOATING_TAB_BAR_CLEARANCE + 8 },
 
   // Empty state
   emptyState: { alignItems: "center", marginTop: 80 },

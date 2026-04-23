@@ -15,6 +15,7 @@ import { getAccounts, PlaidAccount } from "@/services/plaid";
 import { getInsights, Insight } from "@/services/insights";
 import { registerForPushNotifications } from "@/services/notifications";
 import { colors, spacing, radii } from "@/constants/theme";
+import { FLOATING_TAB_BAR_CLEARANCE } from "./_layout";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -227,7 +228,7 @@ function SettingsRow({
 // ─── Styles ──────────────────────────────────────────────────
 const s = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.surface0 },
-  content: { padding: 24, paddingTop: 54, paddingBottom: 40 },
+  content: { padding: 24, paddingTop: 54, paddingBottom: FLOATING_TAB_BAR_CLEARANCE + 8 },
 
   // Header
   headerRow: {
