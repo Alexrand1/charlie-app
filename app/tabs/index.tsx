@@ -300,7 +300,12 @@ export default function HomeScreen() {
             decelerationRate="fast"
           >
             {accounts.slice(0, 6).map((acct) => (
-              <View key={acct.accountId} style={s.acctCard}>
+              <TouchableOpacity
+                key={acct.accountId}
+                style={s.acctCard}
+                onPress={() => router.push(`/accounts/${acct.accountId}` as any)}
+                activeOpacity={0.7}
+              >
                 <Text style={s.acctCardName} numberOfLines={1}>
                   {acct.name}
                 </Text>
@@ -328,7 +333,7 @@ export default function HomeScreen() {
                     </Text>
                   );
                 })()}
-              </View>
+              </TouchableOpacity>
             ))}
             <TouchableOpacity
               style={s.acctCardLink}
@@ -473,7 +478,14 @@ export default function HomeScreen() {
               </View>
             ) : (
               transactions.map((txn) => (
-                <View key={txn.transactionId} style={s.card}>
+                <TouchableOpacity
+                  key={txn.transactionId}
+                  style={s.card}
+                  onPress={() =>
+                    router.push(`/accounts/${txn.accountId}` as any)
+                  }
+                  activeOpacity={0.7}
+                >
                   <View style={s.cardRow}>
                     <View style={{ flex: 1, marginRight: 12 }}>
                       <Text style={s.cardTitle}>
@@ -497,7 +509,7 @@ export default function HomeScreen() {
                       {Math.abs(txn.amount).toFixed(2)}
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))
             )}
           </>

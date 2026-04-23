@@ -2,13 +2,20 @@ import { api } from "./api";
 
 export interface PlaidAccount {
   accountId: string;
+  itemId?: string;
   name: string;
   officialName?: string;
   type: string;
   subtype?: string;
+  mask?: string | null;
   currentBalance: number | null;
   availableBalance: number | null;
+  creditLimit?: number | null;
+  apy?: number | null;
+  institutionName?: string | null;
   isoCurrencyCode: string;
+  lastSyncedAt?: string | null;
+  updatedAt?: string;
 }
 
 export interface PlaidTransaction {
@@ -17,6 +24,7 @@ export interface PlaidTransaction {
   date: string;
   amount: number;
   merchantName?: string;
+  name?: string;
   category: string;
   pending: boolean;
 }
@@ -108,13 +116,32 @@ export async function syncAllItems(): Promise<{ totalSynced: number; errors: str
 }
 
 /**
- * Get the user's transactions.
+ * Get the user's transactions. Supports account/category/date-range filters.
  */
 export async function getTransactions(params?: {
   accountId?: string;
   category?: string;
+  startDate?: string;
+  endDate?: string;
   limit?: number;
 }): Promise<PlaidTransaction[]> {
   const response = await api.get("/plaid/transactions", { params });
   return response.data.transactions;
+}
+
+/**
+ * Get one account + its most recent transactions. Used by the
+ * Account Detail screen.
+ */
+export async function getAccountDetail(
+  accountId: string,
+  txnLimit = 50
+): Promise<{ account: PlaidAccount; transactions: PlaidTransaction[] }> {
+  const response = await api.get(`/plaid/accounts/${accountId}`, {
+    params: { txnLimit },
+  });
+  return {
+    account: response.data.account,
+    transactions: response.data.transactions,
+  };
 }

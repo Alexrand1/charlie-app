@@ -8,6 +8,7 @@ export interface Goal {
   targetAmount: number;
   currentAmount: number;
   deadline: string | null;
+  linkedAccountId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -22,6 +23,7 @@ export async function createGoal(data: {
   label: string;
   targetAmount: number;
   deadline?: string;
+  linkedAccountId?: string;
 }): Promise<Goal> {
   const response = await api.post("/goals", data);
   return response.data.goal;
@@ -29,7 +31,12 @@ export async function createGoal(data: {
 
 export async function updateGoal(
   goalId: string,
-  data: Partial<Pick<Goal, "label" | "targetAmount" | "currentAmount" | "deadline">>
+  data: Partial<
+    Pick<
+      Goal,
+      "label" | "targetAmount" | "currentAmount" | "deadline" | "linkedAccountId"
+    >
+  >
 ): Promise<Goal> {
   const response = await api.put(`/goals/${goalId}`, data);
   return response.data.goal;

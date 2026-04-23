@@ -23,6 +23,7 @@ export interface Insight {
   };
   confidence: "HIGH" | "MEDIUM" | "LOW";
   actedOn?: boolean;
+  actedAt?: string;
   createdAt: string;
 }
 
@@ -31,6 +32,14 @@ export interface Insight {
  */
 export async function getInsights(): Promise<Insight[]> {
   const response = await api.get("/insights");
+  return response.data.insights;
+}
+
+/**
+ * Get the acted-on "Charlie actions" feed. Used by the Activity screen.
+ */
+export async function getActedInsights(): Promise<Insight[]> {
+  const response = await api.get("/insights", { params: { acted: "true" } });
   return response.data.insights;
 }
 
