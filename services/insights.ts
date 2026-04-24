@@ -15,6 +15,10 @@ export interface Insight {
     merchant?: string;
     monthly_cost?: number;
     annual_savings?: number;
+    billing_since?: string; // YYYY-MM-DD
+    last_seen_date?: string; // YYYY-MM-DD
+    unused_months?: number;
+    paid_while_unused?: number;
     // PATTERN
     category?: string;
     current_mtd?: number;

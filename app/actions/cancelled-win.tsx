@@ -1,45 +1,125 @@
+import { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { WinBackground } from "@/components/shared";
 import { colors } from "@/constants/theme";
+import { formatCurrency } from "@/utils/format";
+import { getInsights } from "@/services/insights";
 
 const BG = colors.blue;
 
+/**
+ * Final success state for Stop-a-Leak.
+ *
+ * Params (all optional — we fall back gracefully for deep-linked use):
+ *   merchant       — "Paramount+"
+ *   annualSavings  — numeric string, e.g. "179.88"
+ *   monthlyCost    — numeric string; used to estimate the next-bill date
+ *   lastSeenDate   — YYYY-MM-DD of most recent charge; next-bill date is
+ *                    derived by adding ~1 month, falling back to today + 30d
+ */
 export default function CancelledWinScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    merchant?: string;
+    annualSavings?: string;
+    monthlyCost?: string;
+    lastSeenDate?: string;
+  }>();
+
+  const merchant = params.merchant || "Paramount+";
+  const annualSavings =
+    Number(params.annualSavings) ||
+    (Number(params.monthlyCost) || 14.99) * 12;
+  const nextBillDate = computeNextBillDate(params.lastSeenDate);
+
+  // Live count of remaining active insights for the footer ("N more
+  // actions waiting"). Defaults to 0 — we just hide the footer in that case.
+  const [remainingActions, setRemainingActions] = useState<number | null>(null);
+  useEffect(() => {
+    getInsights()
+      .then((list) => setRemainingActions(list.length))
+      .catch(() => setRemainingActions(0));
+  }, []);
 
   return (
     <WinBackground color={BG}>
       <View style={s.container}>
         <View style={{ flex: 1 }} />
 
-        <Text style={s.emoji}>✂️</Text>
+        <Text style={s.emoji}>🎉</Text>
         <Text style={s.eyebrow}>CANCELLED</Text>
-        <Text style={s.amount}>$179.88</Text>
+        <Text style={s.amount}>{formatCurrency(annualSavings)}</Text>
         <Text style={s.sub}>saved this year</Text>
 
-        {/* Detail card */}
+        {/* What just happened card */}
         <View style={s.detailCard}>
           <Text style={s.detailLabel}>WHAT JUST HAPPENED</Text>
           <View style={s.checkRow}>
             <Text style={s.checkIcon}>✓</Text>
-            <Text style={s.checkText}>Cancelled Paramount+</Text>
+            <Text style={s.checkText}>
+              {merchant} subscription cancelled effective today
+            </Text>
           </View>
           <View style={s.checkRow}>
             <Text style={s.checkIcon}>✓</Text>
-            <Text style={s.checkText}>Confirmation email sent</Text>
+            <Text style={s.checkText}>
+              No more charges after {nextBillDate}
+            </Text>
           </View>
         </View>
 
         <View style={{ flex: 1 }} />
 
-        <TouchableOpacity style={s.btn} onPress={() => router.replace("/tabs")} activeOpacity={0.8}>
-          <Text style={s.btnText}>See what's next</Text>
+        <TouchableOpacity
+          style={s.btn}
+          onPress={() => router.replace("/tabs" as any)}
+          activeOpacity={0.8}
+        >
+          <Text style={s.btnText}>Back to home</Text>
         </TouchableOpacity>
-        <Text style={s.actionsWaiting}>3 more actions waiting</Text>
+        {remainingActions !== null && remainingActions > 0 ? (
+          <Text style={s.actionsWaiting}>
+            {remainingActions} more action{remainingActions === 1 ? "" : "s"}{" "}
+            waiting
+          </Text>
+        ) : (
+          <View style={{ height: 10 }} />
+        )}
       </View>
     </WinBackground>
   );
+}
+
+/**
+ * Compute the "no more charges after" date.
+ *
+ * If we know when the last charge landed, add roughly one month. Otherwise
+ * estimate ~30 days from today. Returns a human label like "Apr 16, 2026".
+ */
+function computeNextBillDate(lastSeenDate?: string): string {
+  const base = (() => {
+    const parsed = parseIsoDate(lastSeenDate);
+    if (parsed) {
+      const next = new Date(parsed);
+      next.setMonth(next.getMonth() + 1);
+      return next;
+    }
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d;
+  })();
+  return base.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function parseIsoDate(iso?: string): Date | null {
+  const [y, m, d] = (iso || "").slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
 }
 
 const s = StyleSheet.create({
@@ -77,12 +157,22 @@ const s = StyleSheet.create({
   },
   checkRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 10,
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  checkIcon: { fontSize: 12, color: colors.positive },
-  checkText: { fontSize: 12, fontWeight: "600", color: "#fff" },
+  checkIcon: {
+    fontSize: 12,
+    color: colors.positive,
+    marginTop: 2,
+  },
+  checkText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#fff",
+    lineHeight: 18,
+  },
   btn: {
     width: "100%",
     height: 52,
