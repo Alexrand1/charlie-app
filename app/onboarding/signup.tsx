@@ -16,6 +16,7 @@ import {
 import * as AppleAuthentication from "expo-apple-authentication";
 import { useRouter } from "expo-router";
 import { auth } from "@/services/auth";
+import { pendingReferral, PendingReferral } from "@/services/pendingReferral";
 import { useOnboarding } from "@/components/onboarding/OnboardingContext";
 import { OnboardingButton } from "@/components/onboarding/OnboardingButton";
 import { ProgressDots } from "@/components/onboarding/ProgressDots";
@@ -31,9 +32,16 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
+  const [invite, setInvite] = useState<PendingReferral | null>(null);
 
   useEffect(() => {
     AppleAuthentication.isAvailableAsync().then(setAppleAvailable);
+    // If the user arrived via a deep link (/invite/CODE), the pending
+    // referral store will have the code + referrer name already — surface
+    // it as a banner so they see who invited them.
+    pendingReferral.get().then((r) => {
+      if (r) setInvite(r);
+    });
   }, []);
 
   function validate(): string | null {
@@ -130,6 +138,25 @@ export default function SignUpScreen() {
             <Text style={s.backArrow}>‹</Text>
             <Text style={s.backText}>Back</Text>
           </TouchableOpacity>
+
+          {/* Invited-by banner — shown only when a deep-link referral is
+              pending (user came in via /invite/CODE). */}
+          {invite && (
+            <View style={s.inviteBanner}>
+              <Text style={s.inviteGift}>🎁</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.inviteTitle}>
+                  {invite.referrerFirstName
+                    ? `Invited by ${invite.referrerFirstName}`
+                    : "You've got an invite"}
+                </Text>
+                <Text style={s.inviteSub}>
+                  Sign up and you both get $10 when you take your first
+                  action.
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/* Headline */}
           <View style={s.header}>
@@ -282,6 +309,30 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: colors.ink,
     fontWeight: "500",
+  },
+  inviteBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.surface2,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  inviteGift: { fontSize: 22 },
+  inviteTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.ink,
+    marginBottom: 2,
+  },
+  inviteSub: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    lineHeight: 15,
   },
   header: {
     marginBottom: 20,

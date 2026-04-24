@@ -1,14 +1,23 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
+import { useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
+import { useRouter, useFocusEffect } from "expo-router";
 import { CTAButton, CharlieCard } from "@/components/shared";
 import { colors } from "@/constants/theme";
 import { copyToClipboard } from "@/utils/clipboard";
+import { getMyReferral, Referral } from "@/services/referral";
 import { FLOATING_TAB_BAR_CLEARANCE } from "./_layout";
 
 const STEPS = [
-  "Share your code or link",
-  "They sign up & connect a bank",
-  "You both get $10",
+  "Share your code or link with a friend",
+  "They sign up and connect their bank",
+  "You both get $10 when they act",
 ];
 
 // The "Get $10" tab renders the referral hub inline so the bottom tab bar
@@ -17,12 +26,36 @@ const STEPS = [
 // screens under /referral/* and get pushed on top when needed.
 export default function ReferTab() {
   const router = useRouter();
+  const [referral, setReferral] = useState<Referral | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      const r = await getMyReferral();
+      setReferral(r);
+    } catch (err) {
+      // Leave referral null — render a degraded hub that still explains
+      // the program but hides the code block.
+      console.warn("[Refer] getMyReferral failed", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  const handleCopyCode = () => {
+    if (!referral) return;
+    copyToClipboard(referral.code, "Code copied!");
+  };
 
   return (
     <View style={s.root}>
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-        {/* Header row — tracker entry point, no back button since tab bar
-            is visible for navigation */}
         <View style={s.headerRow}>
           <Text style={s.screenTitle}>Get $10</Text>
           <TouchableOpacity
@@ -39,17 +72,27 @@ export default function ReferTab() {
           <Text style={{ fontSize: 32 }}>🎁</Text>
           <Text style={s.heroTitle}>Give $10, get $10</Text>
           <Text style={s.heroSub}>
-            Every friend who signs up and links a bank earns you both $10.
+            When your friend signs up and takes their first action, you both
+            get $10.
           </Text>
         </View>
 
-        {/* Code card */}
-        <CharlieCard cornerRadius={14} padding={20}>
-          <View style={{ alignItems: "center" }}>
-            <Text style={s.codeLabel}>YOUR REFERRAL CODE</Text>
-            <Text style={s.codeValue}>CHARLIE10</Text>
+        {/* Code card — tap to copy */}
+        {referral ? (
+          <TouchableOpacity activeOpacity={0.7} onPress={handleCopyCode}>
+            <CharlieCard cornerRadius={14} padding={20}>
+              <View style={{ alignItems: "center" }}>
+                <Text style={s.codeLabel}>YOUR REFERRAL CODE</Text>
+                <Text style={s.codeValue}>{referral.code}</Text>
+                <Text style={s.codeHint}>Tap to copy</Text>
+              </View>
+            </CharlieCard>
+          </TouchableOpacity>
+        ) : loading ? (
+          <View style={s.codeLoadingCard}>
+            <ActivityIndicator color={colors.blue} />
           </View>
-        </CharlieCard>
+        ) : null}
         <View style={{ height: 16 }} />
 
         {/* How it works */}
@@ -66,23 +109,19 @@ export default function ReferTab() {
         </View>
 
         <CTAButton
-          title="Share code"
+          title="Share my invite link"
           variant="blue"
           onPress={() => router.push("/referral/share" as any)}
+          disabled={!referral}
         />
         <View style={{ height: 8 }} />
         <CTAButton
-          title="Copy invite link"
+          title={referral ? `Copy code · ${referral.code}` : "Copy code"}
           variant="sand"
-          onPress={() =>
-            copyToClipboard(
-              "https://charlie.app/invite/CHARLIE10",
-              "Link copied!"
-            )
-          }
+          onPress={handleCopyCode}
+          disabled={!referral}
         />
 
-        {/* Extra bottom padding so content isn't hidden behind the tab bar */}
         <View style={{ height: 120 }} />
       </ScrollView>
     </View>
@@ -92,7 +131,11 @@ export default function ReferTab() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface0 },
   scroll: { flex: 1 },
-  content: { padding: 24, paddingTop: 54, paddingBottom: FLOATING_TAB_BAR_CLEARANCE + 8 },
+  content: {
+    padding: 24,
+    paddingTop: 54,
+    paddingBottom: FLOATING_TAB_BAR_CLEARANCE + 8,
+  },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -142,6 +185,21 @@ const s = StyleSheet.create({
     color: colors.blue,
     letterSpacing: 2,
   },
+  codeHint: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: colors.textMuted,
+    marginTop: 6,
+    letterSpacing: 0.4,
+  },
+  codeLoadingCard: {
+    backgroundColor: colors.surface1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    padding: 28,
+    alignItems: "center",
+  },
   sectionLabel: {
     fontSize: 9,
     fontWeight: "700",
@@ -159,5 +217,5 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   stepNum: { fontSize: 12, fontWeight: "700", color: colors.textOnBlue },
-  stepText: { fontSize: 12, color: colors.ink },
+  stepText: { fontSize: 12, color: colors.ink, flex: 1 },
 });

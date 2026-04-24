@@ -65,6 +65,23 @@ export default function RootLayout() {
         return;
       }
 
+      // Referral-completion payload from notifyRewardEarned →
+      //   { screen: "referral_reward", friendName, amountCents }
+      if (data.screen === "referral_reward") {
+        setTimeout(
+          () =>
+            router.push({
+              pathname: "/referral/reward-earned" as any,
+              params: {
+                friendName: data.friendName || "",
+                amountCents: data.amountCents || "1000",
+              },
+            }),
+          100
+        );
+        return;
+      }
+
       // Plain tab payload: { screen: "home" | "ask" | "goals" | "settings" }
       const route = TAB_ROUTES[data.screen] || "/tabs";
       setTimeout(() => router.push(route as any), 100);

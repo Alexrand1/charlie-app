@@ -1,31 +1,114 @@
-import { View, Text, StyleSheet, TouchableOpacity, Share } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Share,
+  ActivityIndicator,
+  Linking,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { colors } from "@/constants/theme";
 import { copyToClipboard } from "@/utils/clipboard";
+import {
+  getMyReferral,
+  buildInviteLink,
+  buildInviteLinkDisplay,
+  Referral,
+} from "@/services/referral";
 
-const SHARE_OPTIONS = [
-  { icon: "💬", label: "Messages" },
-  { icon: "✉️", label: "Mail" },
-  { icon: "📋", label: "Copy link" },
-  { icon: "⋯", label: "More" },
+type ShareTarget = {
+  icon: string;
+  label: string;
+  handler: (ctx: { link: string; message: string; code: string }) => Promise<void> | void;
+};
+
+// Social targets. iOS-specific URL schemes are best-effort — if the app
+// isn't installed, we fall through to the native share sheet.
+const SHARE_TARGETS: ShareTarget[] = [
+  {
+    icon: "💬",
+    label: "Messages",
+    handler: async ({ message }) => {
+      const url = `sms:&body=${encodeURIComponent(message)}`;
+      const ok = await Linking.canOpenURL(url).catch(() => false);
+      if (ok) Linking.openURL(url);
+      else await Share.share({ message });
+    },
+  },
+  {
+    icon: "✉️",
+    label: "Email",
+    handler: async ({ message }) => {
+      const url = `mailto:?subject=${encodeURIComponent(
+        "Try Charlie — we both get $10"
+      )}&body=${encodeURIComponent(message)}`;
+      const ok = await Linking.canOpenURL(url).catch(() => false);
+      if (ok) Linking.openURL(url);
+      else await Share.share({ message });
+    },
+  },
+  {
+    icon: "📸",
+    label: "Instagram",
+    handler: async ({ code }) => {
+      // Instagram doesn't support prefilled DMs from a URL scheme — the
+      // cleanest flow is to copy the code and open the app.
+      copyToClipboard(code, "Code copied — paste into Instagram");
+      const url = "instagram://";
+      const ok = await Linking.canOpenURL(url).catch(() => false);
+      if (ok) Linking.openURL(url);
+    },
+  },
+  {
+    icon: "𝕏",
+    label: "X",
+    handler: async ({ message }) => {
+      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+        message
+      )}`;
+      await Linking.openURL(url).catch(() => undefined);
+    },
+  },
+  {
+    icon: "⋯",
+    label: "More",
+    handler: async ({ message }) => {
+      await Share.share({ message });
+    },
+  },
 ];
 
 export default function ShareSheetScreen() {
   const router = useRouter();
+  const [referral, setReferral] = useState<Referral | null>(null);
 
-  const handleShare = async () => {
+  useEffect(() => {
+    getMyReferral()
+      .then(setReferral)
+      .catch((err) => console.warn("[Share] getMyReferral failed", err));
+  }, []);
+
+  const code = referral?.code ?? "";
+  const link = referral ? buildInviteLink(referral.code) : "";
+  const linkDisplay = referral ? buildInviteLinkDisplay(referral.code) : "";
+  const message = referral
+    ? `Join me on Charlie — the money app that actually does the work. Use my code ${code} and we both get $10. ${link}`
+    : "";
+
+  const handleCopyLink = () => {
+    if (!link) return;
+    copyToClipboard(link, "Link copied!");
+  };
+
+  const handleShareLink = async () => {
+    if (!message) return;
     try {
-      await Share.share({
-        message:
-          "Join Charlie — the money app that actually does the work. Use my code CHARLIE10 to get $10. https://charlie.app/invite/CHARLIE10",
-      });
+      await Share.share({ message });
     } catch {
       // cancelled
     }
-  };
-
-  const handleCopy = () => {
-    copyToClipboard("https://charlie.app/invite/CHARLIE10", "Copied!");
   };
 
   return (
@@ -40,35 +123,65 @@ export default function ShareSheetScreen() {
       {/* Bottom sheet */}
       <View style={s.sheet}>
         <View style={s.handle} />
-        <Text style={s.title}>Share your invite</Text>
+        <Text style={s.title}>Invite a friend to Charlie</Text>
+        <Text style={s.subtitle}>They save money. You both get $10.</Text>
 
+        {/* Invite link row */}
+        <View style={s.linkRow}>
+          <Text style={s.linkText} numberOfLines={1}>
+            {linkDisplay || "Loading your link…"}
+          </Text>
+          <TouchableOpacity
+            onPress={handleCopyLink}
+            disabled={!link}
+            activeOpacity={0.7}
+            style={s.copyBtn}
+          >
+            <Text
+              style={[
+                s.copyBtnText,
+                { opacity: link ? 1 : 0.4 },
+              ]}
+            >
+              Copy
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Social share targets */}
         <View style={s.iconGrid}>
-          {SHARE_OPTIONS.map((opt) => (
+          {SHARE_TARGETS.map((target) => (
             <TouchableOpacity
-              key={opt.label}
+              key={target.label}
               style={s.iconBtn}
-              onPress={opt.label === "Copy link" ? handleCopy : handleShare}
+              onPress={() =>
+                referral
+                  ? target.handler({ link, message, code })
+                  : undefined
+              }
+              disabled={!referral}
               activeOpacity={0.7}
             >
-              <View style={s.iconCircle}>
-                <Text style={{ fontSize: 18 }}>{opt.icon}</Text>
+              <View style={[s.iconCircle, { opacity: referral ? 1 : 0.4 }]}>
+                <Text style={{ fontSize: 18 }}>{target.icon}</Text>
               </View>
-              <Text style={s.iconLabel}>{opt.label}</Text>
+              <Text style={s.iconLabel}>{target.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={s.divider} />
-
-        <View style={s.codeRow}>
-          <Text style={s.codeText}>CHARLIE10</Text>
-          <TouchableOpacity onPress={handleCopy}>
-            <Text style={s.copyBtn}>Copy</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity onPress={() => router.back()} style={s.closeBtn}>
-          <Text style={s.closeText}>Close</Text>
+        {/* Primary — opens the native share sheet with every installed app */}
+        <TouchableOpacity
+          onPress={handleShareLink}
+          disabled={!referral}
+          activeOpacity={0.85}
+          style={[s.primaryBtn, !referral && { opacity: 0.5 }]}
+        >
+          {referral ? (
+            <Text style={s.primaryBtnText}>Share invite link</Text>
+          ) : (
+            <ActivityIndicator color={colors.textOnBlue} />
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -85,7 +198,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface1,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
-    paddingBottom: 12,
+    paddingBottom: 28,
   },
   handle: {
     width: 36,
@@ -97,38 +210,74 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "700",
     color: colors.ink,
     textAlign: "center",
-    marginBottom: 16,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: "center",
+    marginBottom: 18,
+  },
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface2,
+    marginHorizontal: 20,
+    borderRadius: 12,
+    paddingLeft: 14,
+    paddingRight: 6,
+    paddingVertical: 6,
+    marginBottom: 18,
+  },
+  linkText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.ink,
+    fontWeight: "500",
+  },
+  copyBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: colors.blue,
+  },
+  copyBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.textOnBlue,
+    letterSpacing: 0.3,
   },
   iconGrid: {
     flexDirection: "row",
     justifyContent: "space-around",
-    paddingHorizontal: 24,
-    marginBottom: 18,
+    paddingHorizontal: 16,
+    marginBottom: 20,
   },
   iconBtn: { alignItems: "center", gap: 6 },
   iconCircle: {
-    width: 48,
-    height: 48,
+    width: 46,
+    height: 46,
     borderRadius: 12,
     backgroundColor: colors.surface2,
     justifyContent: "center",
     alignItems: "center",
   },
   iconLabel: { fontSize: 10, color: colors.ink },
-  divider: { height: 1, backgroundColor: colors.borderSubtle, marginHorizontal: 24 },
-  codeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  primaryBtn: {
+    marginHorizontal: 20,
+    height: 52,
+    backgroundColor: colors.blue,
+    borderRadius: 14,
+    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 14,
   },
-  codeText: { fontSize: 13, fontWeight: "700", color: colors.ink },
-  copyBtn: { fontSize: 12, fontWeight: "700", color: colors.blue },
-  closeBtn: { alignItems: "center", paddingVertical: 12 },
-  closeText: { fontSize: 15, fontWeight: "600", color: colors.textSecondary },
+  primaryBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.textOnBlue,
+  },
 });

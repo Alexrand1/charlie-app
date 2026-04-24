@@ -17,6 +17,9 @@
       "bundleIdentifier": "co.getcharlie.app",
       "googleServicesFile": "./GoogleService-Info.plist",
       "usesAppleSignIn": true,
+      "associatedDomains": [
+        "applinks:getcharlie.co"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

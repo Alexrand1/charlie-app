@@ -1,5 +1,12 @@
-import { View, Text, ScrollView, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
+import { useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
+import { useRouter, useFocusEffect } from "expo-router";
 import {
   BackPill,
   Eyebrow,
@@ -8,23 +15,46 @@ import {
   CharlieCard,
 } from "@/components/shared";
 import { colors } from "@/constants/theme";
-
-interface Invite {
-  emoji: string;
-  name: string;
-  status: string;
-  amount: string;
-  complete: boolean;
-}
-
-const INVITES: Invite[] = [
-  { emoji: "✅", name: "Michael K.", status: "Signed up", amount: "+$10", complete: true },
-  { emoji: "⏳", name: "Jamie L.", status: "Pending — no bank yet", amount: "$10", complete: false },
-  { emoji: "⏳", name: "Dana R.", status: "Pending — no bank yet", amount: "$10", complete: false },
-];
+import { formatWholeCurrency } from "@/utils/format";
+import {
+  getMyReferral,
+  getInvites,
+  Referral,
+  ReferralInvite,
+} from "@/services/referral";
 
 export default function ReferralTrackerScreen() {
   const router = useRouter();
+  const [referral, setReferral] = useState<Referral | null>(null);
+  const [invites, setInvites] = useState<ReferralInvite[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      const [r, inv] = await Promise.all([getMyReferral(), getInvites()]);
+      setReferral(r);
+      setInvites(inv);
+    } catch (err) {
+      console.warn("[Tracker] load failed", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  const earnedDollars = referral ? referral.totalEarnedCents / 100 : 0;
+  const completedCount = referral?.friendsJoined ?? 0;
+  const pendingCount = referral?.pendingCount ?? 0;
+
+  // Newest-first — backend returns them in attribution order, so we reverse.
+  const sortedInvites = [...invites].sort((a, b) =>
+    b.attributedAt.localeCompare(a.attributedAt)
+  );
 
   return (
     <ScrollView style={s.scroll} contentContainerStyle={s.content}>
@@ -35,7 +65,7 @@ export default function ReferralTrackerScreen() {
       <View style={{ height: 4 }} />
       <CharlieHeadline
         plainPrefix="You've earned "
-        italicEmphasis="$67"
+        italicEmphasis={formatWholeCurrency(earnedDollars)}
         plainSuffix={"\nso far"}
         size={26}
       />
@@ -43,47 +73,92 @@ export default function ReferralTrackerScreen() {
 
       {/* Stats card */}
       <View style={s.statsCard}>
-        <View style={s.statLeft}>
-          <Text style={s.statNumber}>$67</Text>
+        <View style={s.statCol}>
+          <Text style={s.statNumber}>{formatWholeCurrency(earnedDollars)}</Text>
           <Text style={s.statLabel}>earned</Text>
         </View>
-        <View style={s.statRight}>
-          <Text style={s.statNumber}>2</Text>
-          <Text style={s.statLabel}>complete</Text>
+        <View style={s.statDivider} />
+        <View style={s.statCol}>
+          <Text style={s.statNumber}>{completedCount}</Text>
+          <Text style={s.statLabel}>joined</Text>
+        </View>
+        <View style={s.statDivider} />
+        <View style={s.statCol}>
+          <Text style={s.statNumber}>{pendingCount}</Text>
+          <Text style={s.statLabel}>pending</Text>
         </View>
       </View>
 
-      <Text style={s.sectionLabel}>ACTIVE INVITES</Text>
+      <Text style={s.sectionLabel}>INVITES</Text>
 
-      <CharlieCard cornerRadius={14} padding={4}>
-        {INVITES.map((inv, i) => (
-          <View key={inv.name}>
-            <View style={s.inviteRow}>
-              <View style={s.inviteIcon}>
-                <Text style={{ fontSize: 16 }}>{inv.emoji}</Text>
+      {loading ? (
+        <View style={s.loadingCard}>
+          <ActivityIndicator color={colors.blue} />
+        </View>
+      ) : sortedInvites.length === 0 ? (
+        <View style={s.emptyCard}>
+          <Text style={{ fontSize: 28, marginBottom: 8 }}>📭</Text>
+          <Text style={s.emptyTitle}>No invites yet</Text>
+          <Text style={s.emptySub}>
+            Share your link — you'll see friends show up here as they join.
+          </Text>
+        </View>
+      ) : (
+        <CharlieCard cornerRadius={14} padding={4}>
+          {sortedInvites.map((inv, i) => {
+            const complete = inv.status === "completed";
+            const amountDollars = inv.rewardAmountCents / 100;
+            const statusText = complete
+              ? `Joined ${formatDate(inv.completedAt || inv.attributedAt)}`
+              : "Pending — no first action yet";
+            return (
+              <View key={`${inv.refereeUserId}-${inv.attributedAt}`}>
+                <View style={s.inviteRow}>
+                  <View style={s.inviteIcon}>
+                    <Text style={{ fontSize: 16 }}>
+                      {complete ? "✅" : "⏳"}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.inviteName}>
+                      {inv.refereeFirstName || "New friend"}
+                    </Text>
+                    <Text style={s.inviteStatus}>{statusText}</Text>
+                  </View>
+                  <Text
+                    style={[
+                      s.inviteAmount,
+                      { color: complete ? colors.positive : colors.textMuted },
+                    ]}
+                  >
+                    {complete ? "+" : ""}
+                    {formatWholeCurrency(amountDollars)}
+                  </Text>
+                </View>
+                {i < sortedInvites.length - 1 && <View style={s.divider} />}
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.inviteName}>{inv.name}</Text>
-                <Text style={s.inviteStatus}>{inv.status}</Text>
-              </View>
-              <Text
-                style={[
-                  s.inviteAmount,
-                  { color: inv.complete ? colors.positive : colors.textMuted },
-                ]}
-              >
-                {inv.amount}
-              </Text>
-            </View>
-            {i < INVITES.length - 1 && <View style={s.divider} />}
-          </View>
-        ))}
-      </CharlieCard>
+            );
+          })}
+        </CharlieCard>
+      )}
       <View style={{ height: 16 }} />
 
-      <CTAButton title="Invite another friend" variant="blue" onPress={() => router.push("/referral/share")} />
+      <CTAButton
+        title="Invite another friend"
+        variant="blue"
+        onPress={() => router.push("/referral/share" as any)}
+      />
     </ScrollView>
   );
+}
+
+function formatDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  } catch {
+    return "recently";
+  }
 }
 
 const s = StyleSheet.create({
@@ -95,17 +170,55 @@ const s = StyleSheet.create({
     borderRadius: 16,
     padding: 18,
     marginBottom: 18,
+    alignItems: "center",
   },
-  statLeft: { flex: 1 },
-  statRight: { flex: 1, alignItems: "flex-end" },
-  statNumber: { fontSize: 28, fontStyle: "italic", color: colors.textOnBlue },
-  statLabel: { fontSize: 10, color: colors.textOnBlue, marginTop: 2, opacity: 0.7 },
+  statCol: { flex: 1, alignItems: "center" },
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: "rgba(255,255,255,0.25)",
+  },
+  statNumber: { fontSize: 22, fontStyle: "italic", color: colors.textOnBlue },
+  statLabel: {
+    fontSize: 10,
+    color: colors.textOnBlue,
+    marginTop: 2,
+    opacity: 0.7,
+  },
   sectionLabel: {
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.8,
     color: colors.textSecondary,
     marginBottom: 8,
+  },
+  loadingCard: {
+    backgroundColor: colors.surface1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    padding: 28,
+    alignItems: "center",
+  },
+  emptyCard: {
+    backgroundColor: colors.surface1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    padding: 28,
+    alignItems: "center",
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.ink,
+    marginBottom: 4,
+  },
+  emptySub: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 18,
   },
   inviteRow: {
     flexDirection: "row",
