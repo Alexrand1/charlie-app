@@ -29,10 +29,6 @@ import { FLOATING_TAB_BAR_CLEARANCE } from "./_layout";
 // synthetic "Connect Accounts" featured card.
 const CONNECT_CARD_ID = "__connect_accounts__";
 
-// Fixed category order for dashed "+ Add" placeholder pills that pad the
-// 4-up account row up to 4 slots.
-const PILL_PLACEHOLDER_LABELS = ["Savings", "Invest", "Betting"];
-
 // ─── Tag display mapping for insight action types ────────────
 const ACTION_TAG: Record<string, string> = {
   MOVE_MONEY: "Move Money",
@@ -363,14 +359,18 @@ export default function HomeScreen() {
           </>
         )}
 
-        {/* ─── Account Pills (4-up, flex row — compact by design) ──
-         *  Real accounts fill left-to-right; remaining slots up to 4 render
-         *  as dashed "+ Add" placeholders labeled from PILL_PLACEHOLDER_LABELS
-         *  (Savings, Invest, Betting). Tapping a placeholder opens the
-         *  Link Accounts screen. */}
+        {/* ─── Account Pills (horizontal scroll — all accounts) ──
+         *  Pills are fixed-width so ~3 fit in the viewport; additional
+         *  accounts reveal by sliding right. A dashed "+ Add account" pill
+         *  always sits at the end, routing to /link-accounts. */}
         {hasAccounts && (
-          <View style={s.acctPillRow}>
-            {accounts.slice(0, 4).map((acct) => {
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={s.acctPillScroll}
+            contentContainerStyle={s.acctPillScrollContent}
+          >
+            {accounts.map((acct) => {
               const balance = acct.currentBalance ?? 0;
               const display = DEBT_TYPES.includes(acct.type) ? -balance : balance;
               return (
@@ -399,25 +399,18 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               );
             })}
-            {Array.from({
-              length: Math.max(0, 4 - Math.min(accounts.length, 4)),
-            }).map((_, idx) => {
-              const label = PILL_PLACEHOLDER_LABELS[idx] || "Add";
-              return (
-                <TouchableOpacity
-                  key={`placeholder-${idx}`}
-                  style={s.acctPillPlaceholder}
-                  onPress={() => router.push("/link-accounts" as any)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={s.acctPillPlaceholderLabel} numberOfLines={1}>
-                    {label}
-                  </Text>
-                  <Text style={s.acctPillPlaceholderAdd}>+ Add</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+            {/* Trailing "+ Add account" pill. */}
+            <TouchableOpacity
+              style={s.acctPillAdd}
+              onPress={() => router.push("/link-accounts" as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={s.acctPillAddPlus}>＋</Text>
+              <Text style={s.acctPillAddLabel} numberOfLines={1}>
+                Add account
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
         )}
 
         {/* ─── Actions For You ───────────────────────────
@@ -736,15 +729,21 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
 
-  // ── Account Pills (4-up row) ─────────────────────────────
-  acctPillRow: {
-    flexDirection: "row",
-    gap: 8,
+  // ── Account Pills (horizontal scroll) ────────────────────
+  // Pills are fixed-width so roughly 3 fit in the visible viewport on
+  // standard phones; additional accounts reveal by swiping right.
+  acctPillScroll: {
     marginBottom: 16,
+    marginHorizontal: -24, // bleed past the screen's horizontal padding so
+    // pills can scroll edge-to-edge instead of being clipped inside the 24pt
+    // gutter.
+  },
+  acctPillScrollContent: {
+    paddingHorizontal: 24,
+    gap: 8,
   },
   acctPill: {
-    flex: 1,
-    minWidth: 0, // let children shrink inside the flex row
+    width: 108,
     backgroundColor: colors.surface1,
     borderRadius: 12,
     borderWidth: 1,
@@ -764,11 +763,10 @@ const s = StyleSheet.create({
     fontWeight: "700",
     color: colors.ink,
   },
-  // Dashed "+ Add" placeholder pill — sized identically to a real pill so
-  // the 4-up row stays balanced whether there are 1, 2, or 3 real accounts.
-  acctPillPlaceholder: {
-    flex: 1,
-    minWidth: 0,
+  // Trailing dashed "+ Add account" pill — same fixed width as real pills
+  // so it lines up visually at the end of the carousel.
+  acctPillAdd: {
+    width: 108,
     backgroundColor: "transparent",
     borderRadius: 12,
     borderWidth: 1,
@@ -779,15 +777,15 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  acctPillPlaceholderLabel: {
-    fontSize: 10,
-    fontWeight: "500",
-    color: colors.textMuted,
-    marginBottom: 4,
-  },
-  acctPillPlaceholderAdd: {
-    fontSize: 12,
+  acctPillAddPlus: {
+    fontSize: 16,
     fontWeight: "700",
+    color: colors.blue,
+    marginBottom: 2,
+  },
+  acctPillAddLabel: {
+    fontSize: 11,
+    fontWeight: "600",
     color: colors.blue,
   },
 
