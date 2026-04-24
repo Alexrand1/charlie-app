@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,25 +10,31 @@ import {
   Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { api } from "@/services/api";
 import { auth, AuthUser } from "@/services/auth";
 import { getAccounts, PlaidAccount } from "@/services/plaid";
-import { getInsights, Insight } from "@/services/insights";
+import { getActedInsights, Insight } from "@/services/insights";
 import { registerForPushNotifications } from "@/services/notifications";
-import { colors, spacing, radii } from "@/constants/theme";
+import { colors, spacing } from "@/constants/theme";
 import { FLOATING_TAB_BAR_CLEARANCE } from "./_layout";
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accounts, setAccounts] = useState<PlaidAccount[]>([]);
-  const [insights, setInsights] = useState<Insight[]>([]);
+  const [actedInsights, setActedInsights] = useState<Insight[]>([]);
   const [notifications, setNotifications] = useState(true);
   const [faceId, setFaceId] = useState(false);
 
   useEffect(() => {
-    auth.getUser().then(setUser);
+    // Always fetch a fresh profile — the cached copy may predate the
+    // createdAt field we now rely on for "Member since {year}".
+    api
+      .get("/users/me")
+      .then((r) => setUser(r.data.user))
+      .catch(() => auth.getUser().then(setUser));
     getAccounts().then(setAccounts).catch(() => {});
-    getInsights().then(setInsights).catch(() => {});
+    getActedInsights().then(setActedInsights).catch(() => {});
   }, []);
 
   const handleNotificationToggle = async (value: boolean) => {
@@ -39,7 +45,10 @@ export default function ProfileScreen() {
         Alert.alert(
           "Notifications",
           "Please enable notifications in your device settings.",
-          [{ text: "Open Settings", onPress: () => Linking.openSettings() }, { text: "Cancel", style: "cancel" }]
+          [
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+            { text: "Cancel", style: "cancel" },
+          ]
         );
         setNotifications(false);
       }
@@ -51,23 +60,33 @@ export default function ProfileScreen() {
       const LocalAuth = require("expo-local-authentication");
       const compatible = await LocalAuth.hasHardwareAsync();
       if (!compatible) {
-        Alert.alert("Not Available", "Biometric authentication is not available on this device.");
+        Alert.alert(
+          "Not Available",
+          "Biometric authentication is not available on this device."
+        );
         return;
       }
       const enrolled = await LocalAuth.isEnrolledAsync();
       if (!enrolled) {
-        Alert.alert("Not Set Up", "Please set up Face ID or Touch ID in your device settings.");
+        Alert.alert(
+          "Not Set Up",
+          "Please set up Face ID or Touch ID in your device settings."
+        );
         return;
       }
       if (value) {
-        const result = await LocalAuth.authenticateAsync({ promptMessage: "Enable biometric unlock" });
+        const result = await LocalAuth.authenticateAsync({
+          promptMessage: "Enable biometric unlock",
+        });
         if (result.success) setFaceId(true);
       } else {
         setFaceId(false);
       }
     } catch {
-      // expo-local-authentication not installed
-      Alert.alert("Coming Soon", "Biometric unlock will be available in a future update.");
+      Alert.alert(
+        "Coming Soon",
+        "Biometric unlock will be available in a future update."
+      );
     }
   };
 
@@ -87,57 +106,69 @@ export default function ProfileScreen() {
 
   const firstName = user?.firstName || "User";
   const fullName = firstName;
-  const initial = firstName[0]?.toUpperCase() || "?";
-  const bankNames = accounts.length > 0
-    ? [...new Set(accounts.map((a) => a.name.split(" ")[0]))].join(" · ")
-    : "None connected";
 
-  // Compute stats from real data — subtract debt account balances
+  // "Member since {year}" — use createdAt if we have it, otherwise the current
+  // year (i.e. assume they just joined) so the copy never breaks.
+  const memberSinceYear = (() => {
+    if (!user?.createdAt) return new Date().getFullYear();
+    const d = new Date(user.createdAt);
+    return Number.isNaN(d.getTime()) ? new Date().getFullYear() : d.getFullYear();
+  })();
+
+  // Stats card (blue pill) ── computed from real data
   const DEBT_TYPES = ["credit", "loan"];
   const totalSaved = accounts.reduce((sum, a) => {
     const bal = a.currentBalance ?? 0;
     return sum + (DEBT_TYPES.includes(a.type) ? -bal : bal);
   }, 0);
-  const actionsCount = insights.filter((i) => i.actionType !== "NONE").length;
-  const leaksCount = insights.filter((i) => i.actionType === "STOP_LEAK").length;
+  // "Actions taken" = insights the user has acted on. "Leaks stopped" is the
+  // subset of acted-on insights that were STOP_LEAK.
+  const actionsTakenCount = actedInsights.length;
+  const leaksStoppedCount = actedInsights.filter(
+    (i) => i.actionType === "STOP_LEAK"
+  ).length;
+
+  // Row subtitles
+  const connectedBanksSub =
+    accounts.length > 0
+      ? `${accounts.length} account${accounts.length === 1 ? "" : "s"}`
+      : "None connected";
 
   return (
     <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-      {/* ─── Avatar Header ─────────────────────────────── */}
-      <View style={s.headerRow}>
-        <View style={s.avatar}>
-          <Text style={s.avatarText}>{initial}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.name}>{fullName}</Text>
-          <Text style={s.email}>{user?.email || ""}</Text>
-        </View>
-      </View>
+      {/* ─── Name Header ─────────────────────────────── */}
+      <Text style={s.name}>{fullName}</Text>
+      <Text style={s.proLine}>Charlie Pro · Member since {memberSinceYear}</Text>
 
-      {/* ─── Stats Card ────────────────────────────────── */}
+      {/* ─── Stats Card (blue pill) ───────────────────── */}
       <View style={s.statsCard}>
         <View style={s.statCell}>
-          <Text style={s.statNumber}>${totalSaved > 0 ? totalSaved.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "0"}</Text>
-          <Text style={s.statLabel}>saved</Text>
+          <Text style={s.statNumber}>
+            $
+            {totalSaved > 0
+              ? totalSaved.toLocaleString("en-US", { maximumFractionDigits: 0 })
+              : "0"}
+          </Text>
+          <Text style={s.statLabel}>Saved by Charlie</Text>
         </View>
         <View style={s.statDivider} />
         <View style={s.statCell}>
-          <Text style={s.statNumber}>{actionsCount}</Text>
-          <Text style={s.statLabel}>actions</Text>
+          <Text style={s.statNumber}>{actionsTakenCount}</Text>
+          <Text style={s.statLabel}>Actions taken</Text>
         </View>
         <View style={s.statDivider} />
         <View style={s.statCell}>
-          <Text style={s.statNumber}>{leaksCount}</Text>
-          <Text style={s.statLabel}>leaks</Text>
+          <Text style={s.statNumber}>{leaksStoppedCount}</Text>
+          <Text style={s.statLabel}>Leaks stopped</Text>
         </View>
       </View>
 
-      {/* ─── Settings Card ─────────────────────────────── */}
+      {/* ─── Main Settings Card ───────────────────────── */}
       <View style={s.card}>
         <SettingsRow
           icon="🔔"
           label="Notifications"
-          sub="Push + email"
+          sub="Only when there's money to act on"
           trailing={
             <Switch
               value={notifications}
@@ -148,18 +179,22 @@ export default function ProfileScreen() {
           }
         />
         <View style={s.divider} />
-        <TouchableOpacity onPress={() => router.push("/link-accounts" as any)}>
+        <TouchableOpacity
+          onPress={() => router.push("/link-accounts" as any)}
+          activeOpacity={0.7}
+        >
           <SettingsRow
             icon="🏦"
-            label="Connected banks"
-            sub={bankNames}
+            label="Connected Banks"
+            sub={connectedBanksSub}
+            showChevron
           />
         </TouchableOpacity>
         <View style={s.divider} />
         <SettingsRow
           icon="🔐"
           label="Face ID"
-          sub="Unlock with biometrics"
+          sub={faceId ? "Enabled" : "Disabled"}
           trailing={
             <Switch
               value={faceId}
@@ -170,22 +205,39 @@ export default function ProfileScreen() {
           }
         />
         <View style={s.divider} />
-        <TouchableOpacity onPress={() => router.push("/onboarding/paywall" as any)}>
-          <SettingsRow icon="✨" label="Charlie Pro" sub="Manage subscription" />
+        <TouchableOpacity
+          onPress={() => router.push("/onboarding/paywall" as any)}
+          activeOpacity={0.7}
+        >
+          <SettingsRow
+            icon="⭐"
+            label="Charlie Pro"
+            // Placeholder until real billing state wires in. Renew year is
+            // rendered relative to the user's join year so it reads naturally
+            // ("member since 2026 · renews 2027").
+            sub={`$1/yr · renews ${memberSinceYear + 1}`}
+            showChevron
+          />
         </TouchableOpacity>
       </View>
 
-      {/* ─── Support Card ──────────────────────────────── */}
+      {/* ─── Support Card (kept as its own card per prior layout) ── */}
       <View style={s.card}>
-        <TouchableOpacity onPress={() => Linking.openURL("mailto:support@charlie.app")}>
-          <SettingsRow icon="❓" label="Help & Support" />
+        <TouchableOpacity
+          onPress={() => Linking.openURL("mailto:support@charlie.app")}
+          activeOpacity={0.7}
+        >
+          <SettingsRow icon="❓" label="Help & Support" showChevron />
         </TouchableOpacity>
         <View style={s.divider} />
-        <TouchableOpacity onPress={() => Linking.openURL("https://charlie.app/privacy")}>
-          <SettingsRow icon="🔒" label="Privacy Policy" />
+        <TouchableOpacity
+          onPress={() => Linking.openURL("https://charlie.app/privacy")}
+          activeOpacity={0.7}
+        >
+          <SettingsRow icon="🔒" label="Privacy Policy" showChevron />
         </TouchableOpacity>
         <View style={s.divider} />
-        <TouchableOpacity onPress={handleSignOut}>
+        <TouchableOpacity onPress={handleSignOut} activeOpacity={0.7}>
           <SettingsRow icon="🚪" label="Sign out" destructive />
         </TouchableOpacity>
       </View>
@@ -202,12 +254,14 @@ function SettingsRow({
   sub,
   trailing,
   destructive,
+  showChevron,
 }: {
   icon: string;
   label: string;
   sub?: string;
   trailing?: React.ReactNode;
   destructive?: boolean;
+  showChevron?: boolean;
 }) {
   return (
     <View style={s.settingsRow}>
@@ -218,9 +272,13 @@ function SettingsRow({
         <Text style={[s.settingsLabel, destructive && s.destructiveText]}>
           {label}
         </Text>
-        {sub && <Text style={s.settingsSub}>{sub}</Text>}
+        {sub ? <Text style={s.settingsSub}>{sub}</Text> : null}
       </View>
-      {trailing}
+      {trailing ? (
+        trailing
+      ) : showChevron ? (
+        <Text style={s.chevron}>›</Text>
+      ) : null}
     </View>
   );
 }
@@ -228,53 +286,51 @@ function SettingsRow({
 // ─── Styles ──────────────────────────────────────────────────
 const s = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.surface0 },
-  content: { padding: 24, paddingTop: 54, paddingBottom: FLOATING_TAB_BAR_CLEARANCE + 8 },
+  content: {
+    padding: 24,
+    paddingTop: 54,
+    paddingBottom: FLOATING_TAB_BAR_CLEARANCE + 8,
+  },
 
-  // Header
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  // Name header
+  name: { fontSize: 20, fontWeight: "700", color: colors.ink },
+  proLine: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
     marginBottom: 16,
-    gap: 12,
   },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.blue,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarText: {
-    fontSize: 22,
-    fontStyle: "italic",
-    color: colors.textOnBlue,
-  },
-  name: { fontSize: 17, fontWeight: "700", color: colors.ink },
-  email: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
 
   // Stats
   statsCard: {
     flexDirection: "row",
     backgroundColor: colors.blue,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    marginBottom: 16,
   },
   statCell: { flex: 1, alignItems: "center" },
   statNumber: {
     fontSize: 22,
     fontStyle: "italic",
+    fontWeight: "400",
     color: colors.textOnBlue,
+    marginBottom: 6,
   },
-  statLabel: { fontSize: 10, color: "rgba(245,240,232,0.7)", marginTop: 2 },
+  statLabel: {
+    fontSize: 9,
+    color: "rgba(245,240,232,0.7)",
+    letterSpacing: 0.3,
+    textAlign: "center",
+  },
   statDivider: {
     width: 1,
-    height: 34,
-    backgroundColor: "rgba(245,240,232,0.2)",
+    backgroundColor: "rgba(245,240,232,0.18)",
+    marginVertical: 4,
   },
 
-  // Card
+  // Cards
   card: {
     backgroundColor: colors.surface1,
     borderRadius: 14,
@@ -308,6 +364,12 @@ const s = StyleSheet.create({
   settingsLabel: { fontSize: 13, fontWeight: "600", color: colors.ink },
   settingsSub: { fontSize: 10, color: colors.textSecondary, marginTop: 2 },
   destructiveText: { color: colors.negative },
+  chevron: {
+    fontSize: 20,
+    fontWeight: "300",
+    color: colors.textMuted,
+    marginLeft: 4,
+  },
 
   version: {
     textAlign: "center",
@@ -316,4 +378,5 @@ const s = StyleSheet.create({
     marginTop: spacing.xxl,
     letterSpacing: 0.5,
   },
+
 });

@@ -10,62 +10,137 @@ import {
   CharlieCard,
 } from "@/components/shared";
 import { approveInsight } from "@/services/insights";
-import { createGoal } from "@/services/goals";
 import { colors } from "@/constants/theme";
+
+// expo-notifications is loaded lazily so the screen still renders cleanly in
+// environments where the native module isn't available (Expo Go web preview,
+// or older dev clients).
+let Notifications: any = null;
+try {
+  Notifications = require("expo-notifications");
+} catch {
+  // No-op — the reminder CTA will fall back to an in-memory confirmation.
+}
+
+const CATEGORY_LABEL: Record<string, string> = {
+  dining: "lunch",
+  groceries: "groceries",
+  transport: "transport",
+  shopping: "shopping",
+  subscriptions: "subscriptions",
+  bills: "bills",
+  other: "spending",
+};
 
 export default function FixHabitScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [saving, setSaving] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
 
-  // Parse insight data from route params, with fallbacks
+  // Parse insight data from route params (stringified JSON over nav params).
   const actionValue = params.actionValue
-    ? JSON.parse(params.actionValue as string)
+    ? (() => {
+        try {
+          return JSON.parse(params.actionValue as string);
+        } catch {
+          return {};
+        }
+      })()
     : {};
 
-  const category = actionValue.category || "transport";
-  const currentMtd = actionValue.current_mtd || 148;
-  const avg3mo = actionValue.avg_3mo || 62;
-  const suggestedLimit = actionValue.suggested_limit || Math.round(avg3mo * 1.15);
-  const insightText = (params.insightText as string) || `You've spent $${currentMtd} on ${category} — well above your usual.`;
+  const category: string = actionValue.category || "dining";
+  const categoryLabel = CATEGORY_LABEL[category] || category;
 
-  const ratio = avg3mo > 0 ? (currentMtd / avg3mo).toFixed(1) : "?";
+  // New weekly fields (backend writes these). Fall back to the legacy monthly
+  // fields when an older insight is still live, so we always render something.
+  const last4WeeksRaw: number[] = Array.isArray(actionValue.last_4_weeks)
+    ? actionValue.last_4_weeks
+    : [];
+  const last4Weeks: number[] = [0, 1, 2, 3].map((i) =>
+    Number(last4WeeksRaw[i]) || 0
+  );
+  const lastWeek: number =
+    Number(actionValue.last_week) || last4Weeks[3] || 0;
+  const usualWeekly: number =
+    Number(actionValue.usual_weekly) ||
+    (last4Weeks[0] + last4Weeks[1] + last4Weeks[2]) / 3 ||
+    0;
+  const suggestedLimitWeekly: number =
+    Number(actionValue.suggested_limit_weekly) ||
+    Math.max(5, Math.round(usualWeekly / 5) * 5);
 
-  // Build a simple visual bar chart — current vs average
-  const maxVal = Math.max(currentMtd, avg3mo);
-  const bars = [
-    { label: "3-mo avg", value: avg3mo / maxVal, highlight: false },
-    { label: "This month", value: currentMtd / maxVal, highlight: true },
-  ];
+  // Demo-friendly fallback numbers if the insight is completely empty (e.g.
+  // deep-linked without data) — matches the design mock.
+  const demo = !actionValue.last_4_weeks && !actionValue.last_week;
+  const weeks = demo ? [38, 44, 41, 67] : last4Weeks;
+  const shownLastWeek = demo ? 67 : lastWeek;
+  const shownUsual = demo ? 40 : usualWeekly;
+  const shownLimit = demo ? 40 : suggestedLimitWeekly;
 
-  const handleSetCap = async () => {
-    setSaving(true);
+  const insightText =
+    (params.insightText as string) ||
+    `You spent $${fmt(shownLastWeek)} on ${categoryLabel} last week. Your usual is $${fmt(
+      shownUsual
+    )}. One small change gets you back.`;
+
+  // Bar chart geometry. All bars share a common max so the highlighted bar
+  // visually dominates when spending spikes.
+  const chartMax = Math.max(...weeks, shownUsual, 1);
+  const BAR_MAX_HEIGHT = 80;
+
+  const handleRemindMe = async () => {
+    setScheduling(true);
     try {
-      // Mark insight as acted on
+      // Mark the insight as acted on — non-blocking.
       if (params.insightId && params.createdAt) {
         await approveInsight(
           params.insightId as string,
           params.createdAt as string
-        ).catch(() => {}); // Non-blocking
+        ).catch(() => undefined);
       }
 
-      // Create a spend_limit goal
-      const label = `${category.charAt(0).toUpperCase() + category.slice(1)} monthly cap`;
-      await createGoal({
-        type: "spend_limit",
-        label,
-        targetAmount: suggestedLimit,
-      });
+      // Schedule a local reminder for the upcoming Sunday at 7pm local time.
+      // If we're already past Sunday 7pm, push to next Sunday.
+      const scheduledFor = nextSunday7pm();
+      let actuallyScheduled = false;
+      if (Notifications?.scheduleNotificationAsync) {
+        try {
+          // Ask for permission if we don't already have it. This is cheap
+          // if already granted.
+          const settings =
+            await Notifications.getPermissionsAsync?.().catch(() => null);
+          let granted = settings?.status === "granted";
+          if (!granted && Notifications.requestPermissionsAsync) {
+            const req = await Notifications.requestPermissionsAsync();
+            granted = req?.status === "granted";
+          }
+          if (granted) {
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: "How's your week looking?",
+                body: `Charlie here — staying under $${fmt(shownLimit)} on ${categoryLabel} this week gets you back on track.`,
+                data: { kind: "habit_reminder", category },
+              },
+              trigger: { date: scheduledFor } as any,
+            });
+            actuallyScheduled = true;
+          }
+        } catch {
+          // Silently fall through — we still want to confirm to the user.
+        }
+      }
 
       Alert.alert(
-        "Spending Cap Set!",
-        `Charlie set a $${suggestedLimit}/month cap for ${category}. You'll see this tracked in your Goals tab.`,
+        "Reminder set",
+        actuallyScheduled
+          ? `Charlie will check in on Sunday evening to see how your ${categoryLabel} week went.`
+          : `We couldn't schedule a device reminder, but Charlie will still nudge you in-app about your ${categoryLabel} spending.`,
         [{ text: "Got it", onPress: () => router.back() }]
       );
     } catch (err: any) {
-      Alert.alert("Error", err.response?.data?.message || err.message);
+      Alert.alert("Error", err?.message || "Could not set a reminder.");
     } finally {
-      setSaving(false);
+      setScheduling(false);
     }
   };
 
@@ -74,87 +149,149 @@ export default function FixHabitScreen() {
       <BackPill />
       <View style={{ height: 14 }} />
 
-      <Eyebrow text="Fix a habit" />
+      <Eyebrow text="Fix a Habit" />
       <View style={{ height: 4 }} />
       <CharlieHeadline
-        plainPrefix={`${category.charAt(0).toUpperCase() + category.slice(1)} up `}
-        italicEmphasis={`${ratio}×`}
-        plainSuffix={"\nthis month"}
+        plainPrefix="Back on "
+        italicEmphasis="track"
+        plainSuffix=" this week?"
       />
       <View style={{ height: 6 }} />
       <CharlieSub text={insightText} />
       <View style={{ height: 16 }} />
 
-      {/* Bar chart card */}
+      {/* ── Weekly bar chart card ────────────────────────── */}
       <CharlieCard cornerRadius={14} padding={14}>
+        <Text style={s.cardTitle}>
+          {capitalize(categoryLabel)} spending · Last 4 weeks
+        </Text>
         <View style={s.chartRow}>
-          {bars.map((w) => (
-            <View key={w.label} style={s.barCol}>
-              <Text style={[s.barAmount, w.highlight && { color: colors.negative }]}>
-                ${w.highlight ? currentMtd : avg3mo}
-              </Text>
-              <View
-                style={[
-                  s.bar,
-                  {
-                    height: 70 * w.value,
-                    backgroundColor: w.highlight ? colors.negative : colors.surface2,
-                  },
-                ]}
-              />
-              <Text style={s.barLabel}>{w.label}</Text>
-            </View>
-          ))}
+          {weeks.map((value, i) => {
+            const isLast = i === weeks.length - 1;
+            const h = Math.max(4, (value / chartMax) * BAR_MAX_HEIGHT);
+            return (
+              <View key={i} style={s.barCol}>
+                <View style={s.barTrack}>
+                  <View
+                    style={[
+                      s.bar,
+                      {
+                        height: h,
+                        backgroundColor: isLast
+                          ? colors.negative
+                          : colors.surface2,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text
+                  style={[
+                    s.barLabel,
+                    isLast && { color: colors.negative, fontWeight: "700" },
+                  ]}
+                >
+                  ${fmt(value)}
+                </Text>
+              </View>
+            );
+          })}
         </View>
         <View style={s.divider} />
         <View style={s.usualRow}>
-          <Text style={s.usualLabel}>Your 3-month average</Text>
-          <Text style={s.usualValue}>~${avg3mo}/mo</Text>
+          <Text style={s.usualLabel}>Your usual</Text>
+          <Text style={s.usualValue}>~${fmt(shownUsual)}/wk</Text>
         </View>
       </CharlieCard>
       <View style={{ height: 14 }} />
 
-      {/* Suggestion callout */}
+      {/* ── Suggestion callout ───────────────────────────── */}
       <View style={s.callout}>
         <Text style={s.calloutLabel}>CHARLIE'S SUGGESTION</Text>
         <Text style={s.calloutText}>
-          "Try a ${suggestedLimit}/month cap on {category}. I'll track it for you in Goals."
+          "Stay under ${fmt(shownLimit)} on {categoryLabel} this week to get
+          back on track. Want a reminder?"
         </Text>
       </View>
 
       <View style={{ flex: 1, minHeight: 40 }} />
 
       <CTAButton
-        title={saving ? "Setting cap..." : `Set $${suggestedLimit}/month cap`}
+        title={scheduling ? "Setting reminder..." : "Yes, remind me"}
         variant="blue"
-        onPress={handleSetCap}
-        disabled={saving}
+        onPress={handleRemindMe}
+        disabled={scheduling}
       />
       <View style={{ height: 8 }} />
-      <CTAButton title="Not now" variant="sand" onPress={() => router.back()} />
+      <CTAButton title="No thanks" variant="sand" onPress={() => router.back()} />
     </ScrollView>
   );
+}
+
+/** Format a dollar amount with no cents unless it's non-integer and small. */
+function fmt(n: number): string {
+  if (!Number.isFinite(n)) return "0";
+  if (Math.abs(n) >= 10 || n === Math.round(n)) {
+    return Math.round(n).toString();
+  }
+  return n.toFixed(2);
+}
+
+function capitalize(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Next upcoming Sunday at 7pm in the user's local timezone. If today is
+ *  Sunday and it's already past 7pm, we push to the following Sunday. */
+function nextSunday7pm(): Date {
+  const d = new Date();
+  const day = d.getDay(); // 0 = Sunday
+  let daysUntilSunday = (7 - day) % 7;
+  const candidate = new Date(d);
+  candidate.setDate(d.getDate() + daysUntilSunday);
+  candidate.setHours(19, 0, 0, 0);
+  if (candidate.getTime() <= d.getTime()) {
+    candidate.setDate(candidate.getDate() + 7);
+  }
+  return candidate;
 }
 
 const s = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.surface0 },
   content: { padding: 24, paddingTop: 54, paddingBottom: 24, minHeight: "100%" },
+  cardTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.blue,
+    letterSpacing: 0.3,
+    marginBottom: 10,
+  },
   chartRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 12,
-    marginBottom: 10,
+    gap: 10,
+    marginBottom: 12,
+    height: 100,
   },
-  barCol: { flex: 1, alignItems: "center", gap: 6 },
+  barCol: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 6,
+  },
+  barTrack: {
+    width: "100%",
+    height: 80,
+    justifyContent: "flex-end",
+  },
   bar: { width: "100%", borderRadius: 4 },
-  barAmount: { fontSize: 12, fontWeight: "700", color: colors.ink },
-  barLabel: { fontSize: 9, color: colors.textSecondary },
+  barLabel: { fontSize: 10, color: colors.textSecondary, fontWeight: "600" },
   divider: { height: 1, backgroundColor: colors.borderSubtle, marginBottom: 8 },
   usualRow: { flexDirection: "row", justifyContent: "space-between" },
   usualLabel: { fontSize: 11, color: colors.textSecondary },
   usualValue: { fontSize: 11, fontWeight: "700", color: colors.ink },
   callout: {
-    padding: 12,
+    padding: 14,
     backgroundColor: colors.sand2,
     borderRadius: 12,
     borderWidth: 1,

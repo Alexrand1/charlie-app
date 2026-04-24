@@ -21,9 +21,13 @@ export interface Insight {
     paid_while_unused?: number;
     // PATTERN
     category?: string;
+    last_week?: number;
+    last_4_weeks?: number[];
+    usual_weekly?: number;
+    suggested_limit_weekly?: number;
     current_mtd?: number;
     avg_3mo?: number;
-    suggested_limit?: number;
+    suggested_limit?: number; // deprecated; kept for older insights
   };
   confidence: "HIGH" | "MEDIUM" | "LOW";
   actedOn?: boolean;

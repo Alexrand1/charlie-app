@@ -8,7 +8,6 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
-  Dimensions,
 } from "react-native";
 import { useRouter, useNavigation } from "expo-router";
 import { api } from "@/services/api";
@@ -40,8 +39,29 @@ const ACTION_ICON: Record<string, string> = {
   NONE: "💡",
 };
 
-const { width: SCREEN_W } = Dimensions.get("window");
-const ACCT_CARD_WIDTH = Math.floor((SCREEN_W - 48 - 20) / 3.3); // 3 visible + peek of 4th
+/**
+ * Shorten long account names so four pills fit on one row. We only
+ * abbreviate the common "Savings" / "Checking" suffixes — everything else
+ * falls through to a length cap so bank-specific names like "Kalshi" or
+ * "Fidelity" render verbatim.
+ */
+function shortAcctName(raw: string): string {
+  const trimmed = (raw || "").trim();
+  // Common suffixes — keep the bank name, abbreviate the product.
+  const rules: Array<[RegExp, string]> = [
+    [/\bSavings\b/i, "Sav."],
+    [/\bSaving\b/i, "Sav."],
+    [/\bChecking\b/i, "Chk."],
+    [/\bCredit Card\b/i, "CC"],
+    [/\bInvestment\b/i, "Inv."],
+  ];
+  let out = trimmed;
+  for (const [pattern, repl] of rules) {
+    out = out.replace(pattern, repl);
+  }
+  out = out.replace(/\s+/g, " ").trim();
+  return out.length > 10 ? out.slice(0, 10) + "…" : out;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -261,7 +281,7 @@ export default function HomeScreen() {
         </View>
 
         {/* ─── Total Balance ───────────────────────────── */}
-        <Text style={s.balanceLabel}>TOTAL BALANCE</Text>
+        <Text style={s.balanceLabel}>Total Balance</Text>
         {totalBalance !== null ? (
           <>
             <Text style={s.balanceValue}>
@@ -273,7 +293,7 @@ export default function HomeScreen() {
                 totalDelta < 0 && { color: colors.negative },
               ]}
             >
-              {totalDelta >= 0 ? "↑" : "↓"} $
+              {totalDelta >= 0 ? "+" : "−"} $
               {Math.abs(totalDelta).toLocaleString("en-US", {
                 maximumFractionDigits: 0,
               })}{" "}
@@ -289,61 +309,39 @@ export default function HomeScreen() {
           </>
         )}
 
-        {/* ─── Account Cards ───────────────────────────── */}
+        {/* ─── Account Pills (4-up, flex row — compact by design) ── */}
         {hasAccounts && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={s.acctCardScroll}
-            contentContainerStyle={s.acctCardRow}
-            snapToInterval={ACCT_CARD_WIDTH + 10}
-            decelerationRate="fast"
-          >
-            {accounts.slice(0, 6).map((acct) => (
-              <TouchableOpacity
-                key={acct.accountId}
-                style={s.acctCard}
-                onPress={() => router.push(`/accounts/${acct.accountId}` as any)}
-                activeOpacity={0.7}
-              >
-                <Text style={s.acctCardName} numberOfLines={1}>
-                  {acct.name}
-                </Text>
-                <Text style={s.acctCardBalance}>
-                  {DEBT_TYPES.includes(acct.type) ? "-" : ""}$
-                  {(acct.currentBalance ?? 0).toLocaleString("en-US", {
-                    maximumFractionDigits: 0,
-                  })}
-                </Text>
-                {(() => {
-                  const delta = acctDeltas[acct.accountId] || 0;
-                  if (delta === 0) return null;
-                  return (
-                    <Text
-                      style={[
-                        s.acctCardDelta,
-                        delta < 0 && { color: colors.negative },
-                      ]}
-                    >
-                      {delta >= 0 ? "+ " : "- "}$
-                      {Math.abs(delta).toLocaleString("en-US", {
-                        maximumFractionDigits: 0,
-                      })}{" "}
-                      this month
-                    </Text>
-                  );
-                })()}
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={s.acctCardLink}
-              onPress={handleConnectBank}
-              activeOpacity={0.7}
-            >
-              <Text style={s.acctCardLinkIcon}>+</Text>
-              <Text style={s.acctCardLinkText}>Link Account</Text>
-            </TouchableOpacity>
-          </ScrollView>
+          <View style={s.acctPillRow}>
+            {accounts.slice(0, 4).map((acct) => {
+              const balance = acct.currentBalance ?? 0;
+              const display = DEBT_TYPES.includes(acct.type) ? -balance : balance;
+              return (
+                <TouchableOpacity
+                  key={acct.accountId}
+                  style={s.acctPill}
+                  onPress={() =>
+                    router.push(`/accounts/${acct.accountId}` as any)
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Text style={s.acctPillName} numberOfLines={1}>
+                    {shortAcctName(acct.name)}
+                  </Text>
+                  <Text
+                    style={[
+                      s.acctPillBalance,
+                      display < 0 && { color: colors.negative },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    ${Math.abs(display).toLocaleString("en-US", {
+                      maximumFractionDigits: 0,
+                    })}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         )}
 
         {/* ─── Actions For You ─────────────────────────── */}
@@ -453,8 +451,8 @@ export default function HomeScreen() {
             <Text style={s.allClearEmoji}>🏖</Text>
             <Text style={s.allClearTitle}>You're all caught up</Text>
             <Text style={s.allClearSub}>
-              Charlie's watching for new ways to save.{"\n"}We'll ping you when
-              something comes up.
+              Charlie's watching your accounts.{"\n"}We'll let you know the
+              moment there's money to be moved or saved.
             </Text>
           </View>
         )}
@@ -607,11 +605,10 @@ const s = StyleSheet.create({
 
   // ── Balance ─────────────────────────────────────────────
   balanceLabel: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "600",
     color: colors.muted,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
+    letterSpacing: 0.2,
   },
   balanceValue: {
     fontSize: 42,
@@ -639,60 +636,33 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
 
-  // ── Account Cards ────────────────────────────────────────
-  acctCardScroll: { marginBottom: 14 },
-  acctCardRow: { gap: 10, paddingRight: 24 },
-  acctCard: {
-    width: ACCT_CARD_WIDTH,
+  // ── Account Pills (4-up row) ─────────────────────────────
+  acctPillRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  acctPill: {
+    flex: 1,
+    minWidth: 0, // let children shrink inside the flex row
     backgroundColor: colors.surface1,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    justifyContent: "space-between",
-    minHeight: 100,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    alignItems: "center",
   },
-  acctCardName: {
-    fontSize: 11,
+  acctPillName: {
+    fontSize: 10,
     fontWeight: "500",
     color: colors.muted,
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  acctCardBalance: {
-    fontSize: 20,
+  acctPillBalance: {
+    fontSize: 15,
     fontWeight: "700",
     color: colors.ink,
-    marginBottom: 4,
-  },
-  acctCardDelta: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: colors.positive,
-  },
-  acctCardLink: {
-    width: ACCT_CARD_WIDTH,
-    backgroundColor: "transparent",
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: colors.borderMid,
-    borderStyle: "dashed",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    minHeight: 100,
-  },
-  acctCardLinkIcon: {
-    fontSize: 22,
-    fontWeight: "300",
-    color: colors.blue,
-    marginBottom: 4,
-  },
-  acctCardLinkText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: colors.blue,
   },
 
   // ── Actions Header ──────────────────────────────────────

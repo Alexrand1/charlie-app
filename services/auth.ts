@@ -9,6 +9,9 @@ export interface AuthUser {
   userId: string;
   email: string;
   firstName: string;
+  // ISO timestamp when the user's DynamoDB profile was first written.
+  // Optional because older cached users (pre-upgrade) may not carry it.
+  createdAt?: string;
 }
 
 /** Read any pending referral code captured from a deep link. Best-effort —
