@@ -21,8 +21,17 @@ import {
 } from "@/services/plaid";
 import { getInsights, generateInsights, dismissInsight, Insight } from "@/services/insights";
 import { usePlaidLink } from "@/hooks/usePlaidLink";
+import { PlaidConnectSheet } from "@/components/shared";
 import { colors, spacing, radii } from "@/constants/theme";
 import { FLOATING_TAB_BAR_CLEARANCE } from "./_layout";
+
+// Client-side sentinel — used in place of a real insightId for the
+// synthetic "Connect Accounts" featured card.
+const CONNECT_CARD_ID = "__connect_accounts__";
+
+// Fixed category order for dashed "+ Add" placeholder pills that pad the
+// 4-up account row up to 4 slots.
+const PILL_PLACEHOLDER_LABELS = ["Savings", "Invest", "Betting"];
 
 // ─── Tag display mapping for insight action types ────────────
 const ACTION_TAG: Record<string, string> = {
@@ -75,6 +84,11 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   // Track expanded insight by ID (not index) so swaps are stable across refetches
   const [expandedInsightId, setExpandedInsightId] = useState<string | null>(null);
+  // Ephemeral: when the user dismisses the synthetic Connect Accounts card
+  // we hide it for this session (reappears on next app open — intentional).
+  const [connectDismissed, setConnectDismissed] = useState(false);
+  // Plaid intro sheet visibility (shown before handing to Plaid Link SDK).
+  const [plaidSheetVisible, setPlaidSheetVisible] = useState(false);
   const generatingRef = useRef(false); // prevent concurrent generate calls
   const hasGeneratedRef = useRef(false); // only auto-generate once per session
 
@@ -159,7 +173,15 @@ export default function HomeScreen() {
     },
   });
 
-  const handleConnectBank = () => openPlaidLink();
+  /** Show the Charlie intro sheet first; Plaid Link opens after Continue. */
+  const handleConnectBank = () => setPlaidSheetVisible(true);
+
+  const handleContinueWithPlaid = () => {
+    setPlaidSheetVisible(false);
+    // Let the bottom sheet finish its dismiss animation before the Plaid
+    // SDK tries to present its own modal — iOS otherwise refuses to stack.
+    setTimeout(() => openPlaidLink(), 220);
+  };
 
   const handleSync = async () => {
     setSyncing(true);
@@ -187,6 +209,13 @@ export default function HomeScreen() {
   };
 
   const handleActionPress = (insight: Insight) => {
+    // Synthetic "Connect Accounts" card — route to /link-accounts rather
+    // than any action screen. Nothing else in the action pipeline should
+    // run for it (no createdAt, no approve call).
+    if (insight.insightId === CONNECT_CARD_ID) {
+      router.push("/link-accounts" as any);
+      return;
+    }
     const routes: Record<string, string> = {
       MOVE_MONEY: "/actions/move-money",
       STOP_LEAK: "/actions/cancel-subscription",
@@ -210,6 +239,11 @@ export default function HomeScreen() {
   };
 
   const handleDismissInsight = async (insight: Insight) => {
+    // Synthetic Connect Accounts card — ephemeral local dismiss only.
+    if (insight.insightId === CONNECT_CARD_ID) {
+      setConnectDismissed(true);
+      return;
+    }
     try {
       await dismissInsight(insight.insightId, insight.createdAt);
       setInsights((prev) =>
@@ -218,6 +252,26 @@ export default function HomeScreen() {
     } catch {
       // Silently fail — will reappear on next refresh
     }
+  };
+
+  /** Build the synthetic "Connect Accounts" featured card. Returned only
+   *  when the user has 0–1 accounts connected and hasn't dismissed it for
+   *  this session. */
+  const buildConnectCard = (acctCount: number): Insight | null => {
+    if (connectDismissed) return null;
+    if (acctCount > 1) return null;
+    return {
+      insightId: CONNECT_CARD_ID,
+      actionType: "NONE",
+      insight:
+        acctCount === 0
+          ? "Link an account. Charlie works best when it can see all your money — checking, savings, investments, and credit cards."
+          : "Link more accounts. Charlie works best when it can see all your money — checking, savings, investments, and credit cards.",
+      actionLabel: acctCount === 0 ? "Link accounts" : "Add more",
+      actionDetail: "Connect accounts",
+      confidence: "HIGH",
+      createdAt: "",
+    };
   };
 
   if (loading) {
@@ -309,7 +363,11 @@ export default function HomeScreen() {
           </>
         )}
 
-        {/* ─── Account Pills (4-up, flex row — compact by design) ── */}
+        {/* ─── Account Pills (4-up, flex row — compact by design) ──
+         *  Real accounts fill left-to-right; remaining slots up to 4 render
+         *  as dashed "+ Add" placeholders labeled from PILL_PLACEHOLDER_LABELS
+         *  (Savings, Invest, Betting). Tapping a placeholder opens the
+         *  Link Accounts screen. */}
         {hasAccounts && (
           <View style={s.acctPillRow}>
             {accounts.slice(0, 4).map((acct) => {
@@ -341,51 +399,99 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               );
             })}
+            {Array.from({
+              length: Math.max(0, 4 - Math.min(accounts.length, 4)),
+            }).map((_, idx) => {
+              const label = PILL_PLACEHOLDER_LABELS[idx] || "Add";
+              return (
+                <TouchableOpacity
+                  key={`placeholder-${idx}`}
+                  style={s.acctPillPlaceholder}
+                  onPress={() => router.push("/link-accounts" as any)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={s.acctPillPlaceholderLabel} numberOfLines={1}>
+                    {label}
+                  </Text>
+                  <Text style={s.acctPillPlaceholderAdd}>+ Add</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
 
-        {/* ─── Actions For You ─────────────────────────── */}
-        <View style={s.actionsHeader}>
-          <Text style={s.sectionLabel}>Actions for you</Text>
-          {insights.length > 0 ? (
-            <View style={s.countBadge}>
-              <Text style={s.countBadgeText}>{insights.length}</Text>
-            </View>
-          ) : (
-            <View style={s.checkBadge}>
-              <Text style={s.checkBadgeText}>✓</Text>
-            </View>
-          )}
-        </View>
+        {/* ─── Actions For You ───────────────────────────
+         *  Build a merged card list: synthetic "Connect Accounts" card first
+         *  (when acctCount <= 1 and not dismissed), then LLM insights. The
+         *  total drives the count badge. */}
+        {(() => {
+          const connectCard = buildConnectCard(accounts.length);
+          const cards: Insight[] = connectCard
+            ? [connectCard, ...insights]
+            : insights;
 
-        {insights.length > 0 ? (
-          (() => {
-            // Resolve which insight is currently expanded. Default to the first
-            // when nothing is explicitly expanded, or when the previously
-            // expanded insight was dismissed/regenerated.
-            const expandedInsight =
-              insights.find((i) => i.insightId === expandedInsightId) ||
-              insights[0];
-            const collapsedInsights = insights.filter(
-              (i) => i.insightId !== expandedInsight.insightId
-            );
-
-            // Split insight text: first sentence = headline, rest = sub copy
-            const dotIdx = expandedInsight.insight.indexOf(". ");
-            const headline =
-              dotIdx > 0
-                ? expandedInsight.insight.slice(0, dotIdx + 1)
-                : expandedInsight.insight;
-            const subCopy =
-              dotIdx > 0 ? expandedInsight.insight.slice(dotIdx + 2) : "";
-
+          if (cards.length === 0) {
             return (
+              <>
+                <View style={s.actionsHeader}>
+                  <Text style={s.sectionLabel}>Actions for you</Text>
+                  <View style={s.checkBadge}>
+                    <Text style={s.checkBadgeText}>✓</Text>
+                  </View>
+                </View>
+                {/* All caught up state */}
+                <View style={s.allClear}>
+                  <Text style={s.allClearEmoji}>🏖</Text>
+                  <Text style={s.allClearTitle}>You're all caught up</Text>
+                  <Text style={s.allClearSub}>
+                    Charlie's watching your accounts.{"\n"}We'll let you know the
+                    moment there's money to be moved or saved.
+                  </Text>
+                </View>
+              </>
+            );
+          }
+
+          // Resolve which card is currently expanded. Default to the first
+          // (synthetic card wins when present) when nothing is explicitly
+          // expanded or the previously expanded card is gone.
+          const expandedInsight =
+            cards.find((i) => i.insightId === expandedInsightId) || cards[0];
+          const collapsedInsights = cards.filter(
+            (i) => i.insightId !== expandedInsight.insightId
+          );
+
+          // Split insight text: first sentence = headline, rest = sub copy
+          const dotIdx = expandedInsight.insight.indexOf(". ");
+          const headline =
+            dotIdx > 0
+              ? expandedInsight.insight.slice(0, dotIdx + 1)
+              : expandedInsight.insight;
+          const subCopy =
+            dotIdx > 0 ? expandedInsight.insight.slice(dotIdx + 2) : "";
+
+          const tagFor = (insight: Insight) =>
+            insight.insightId === CONNECT_CARD_ID
+              ? "Connect Accounts · Recommended"
+              : ACTION_TAG[insight.actionType] || "Insight";
+
+          const iconFor = (insight: Insight) =>
+            insight.insightId === CONNECT_CARD_ID
+              ? "🏦"
+              : ACTION_ICON[insight.actionType] || "💡";
+
+          return (
+            <>
+              <View style={s.actionsHeader}>
+                <Text style={s.sectionLabel}>Actions for you</Text>
+                <View style={s.countBadge}>
+                  <Text style={s.countBadgeText}>{cards.length}</Text>
+                </View>
+              </View>
               <View style={s.actionCards}>
                 {/* ── Featured blue card (always at top) ── */}
                 <View style={s.featuredCard}>
-                  <Text style={s.featuredTag}>
-                    {ACTION_TAG[expandedInsight.actionType] || "Insight"}
-                  </Text>
+                  <Text style={s.featuredTag}>{tagFor(expandedInsight)}</Text>
                   <Text style={s.featuredHeadline}>{headline}</Text>
                   {subCopy.length > 0 && (
                     <Text style={s.featuredSub}>{subCopy}</Text>
@@ -426,14 +532,10 @@ export default function HomeScreen() {
                       activeOpacity={0.7}
                     >
                       <View style={s.compactIcon}>
-                        <Text style={s.compactIconText}>
-                          {ACTION_ICON[insight.actionType] || "💡"}
-                        </Text>
+                        <Text style={s.compactIconText}>{iconFor(insight)}</Text>
                       </View>
                       <View style={s.compactContent}>
-                        <Text style={s.compactTag}>
-                          {ACTION_TAG[insight.actionType] || "Insight"}
-                        </Text>
+                        <Text style={s.compactTag}>{tagFor(insight)}</Text>
                         <Text style={s.compactBrief} numberOfLines={1}>
                           {brief}
                         </Text>
@@ -443,19 +545,9 @@ export default function HomeScreen() {
                   );
                 })}
               </View>
-            );
-          })()
-        ) : (
-          // All caught up state
-          <View style={s.allClear}>
-            <Text style={s.allClearEmoji}>🏖</Text>
-            <Text style={s.allClearTitle}>You're all caught up</Text>
-            <Text style={s.allClearSub}>
-              Charlie's watching your accounts.{"\n"}We'll let you know the
-              moment there's money to be moved or saved.
-            </Text>
-          </View>
-        )}
+            </>
+          );
+        })()}
 
         {/* ─── Transactions ────────────────────────────── */}
         {hasAccounts && (
@@ -561,6 +653,14 @@ export default function HomeScreen() {
         {/* Bottom spacer for tab bar */}
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Plaid intro sheet — shown before handing off to Plaid Link SDK. */}
+      <PlaidConnectSheet
+        visible={plaidSheetVisible}
+        onClose={() => setPlaidSheetVisible(false)}
+        onContinue={handleContinueWithPlaid}
+        loading={plaidLoading}
+      />
     </View>
   );
 }
@@ -663,6 +763,32 @@ const s = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: colors.ink,
+  },
+  // Dashed "+ Add" placeholder pill — sized identically to a real pill so
+  // the 4-up row stays balanced whether there are 1, 2, or 3 real accounts.
+  acctPillPlaceholder: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: "transparent",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.borderMid,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  acctPillPlaceholderLabel: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: colors.textMuted,
+    marginBottom: 4,
+  },
+  acctPillPlaceholderAdd: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.blue,
   },
 
   // ── Actions Header ──────────────────────────────────────

@@ -11,3 +11,4 @@ export { SectionHeader } from "./SectionHeader";
 export { AccountRow } from "./AccountRow";
 export { TransactionRow } from "./TransactionRow";
 export { ActionRow } from "./ActionRow";
+export { PlaidConnectSheet } from "./PlaidConnectSheet";
