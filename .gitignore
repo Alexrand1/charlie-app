@@ -12,3 +12,6 @@ android/
 
 expo-env.d.ts
 # @end expo-cli
+# Firebase config — bring your own (see README)
+GoogleService-Info.plist
+google-services.json
